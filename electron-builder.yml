@@ -1,0 +1,12 @@
+appId: com.ai-research-widget.app
+productName: AI Research Widget
+directories:
+  buildResources: build
+  output: dist
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+dmg:
+  artifactName: ${name}-${version}.${ext}
