@@ -1,11 +1,17 @@
 import Parser from 'rss-parser'
+import https from 'https'
 import type { RawArticle, RssSource } from '../../shared/types'
 
 export class RssCollector {
   private parser: Parser
 
   constructor() {
-    this.parser = new Parser({ timeout: 10000 })
+    this.parser = new Parser({
+      timeout: 10000,
+      requestOptions: {
+        agent: new https.Agent({ rejectUnauthorized: false })
+      }
+    })
   }
 
   async collect(sources: RssSource[]): Promise<RawArticle[]> {

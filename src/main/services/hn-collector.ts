@@ -20,14 +20,14 @@ export class HackerNewsCollector {
     const stories = await Promise.allSettled(
       top50Ids.map(id => this.fetchStory(id))
     )
-    const lowerKeywords = keywords.map(k => k.toLowerCase())
+    const keywordGroups = keywords.map(k => k.toLowerCase().split(/\s+/))
     return stories
       .filter((r): r is PromiseFulfilledResult<HNStory | null> => r.status === 'fulfilled')
       .map(r => r.value)
       .filter((story): story is HNStory => {
         if (!story || story.type !== 'story' || story.score < 10) return false
         const title = story.title.toLowerCase()
-        return lowerKeywords.some(kw => title.includes(kw.toLowerCase()))
+        return keywordGroups.some(words => words.every(w => title.includes(w)))
       })
       .map(story => ({
         title: story.title,

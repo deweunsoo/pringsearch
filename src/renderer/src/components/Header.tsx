@@ -21,10 +21,7 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: '12px',
-      paddingBottom: '8px',
-      borderBottom: scrolled ? '1px solid rgba(0, 0, 0, 0.06)' : '1px solid transparent',
-      transition: 'border-color 0.2s ease'
+      marginBottom: '12px'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div className="traffic-lights">
