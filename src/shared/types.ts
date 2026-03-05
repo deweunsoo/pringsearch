@@ -41,7 +41,7 @@ export interface RssSource {
 export interface AppConfig {
   scheduleHour: number
   scheduleMinute: number
-  geminiApiKey: string
+  anthropicApiKey: string
   rssSources: RssSource[]
   keywords: string[]
   notificationEnabled: boolean
@@ -51,7 +51,7 @@ export interface AppConfig {
 export const DEFAULT_CONFIG: AppConfig = {
   scheduleHour: 10,
   scheduleMinute: 30,
-  geminiApiKey: '',
+  anthropicApiKey: '',
   rssSources: [
     { name: 'MIT Tech Review - AI', url: 'https://www.technologyreview.com/feed/', enabled: true },
     { name: 'The Verge - AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', enabled: true },

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { spawn } from 'child_process'
 import type { RawArticle, TrendItem, InsightItem, ActionItem } from '../../shared/types'
 
 interface AnalysisResult {
@@ -7,19 +7,11 @@ interface AnalysisResult {
   actions: ActionItem[]
 }
 
-export class GeminiAnalyzer {
-  private genAI: GoogleGenerativeAI
-
-  constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey)
-  }
-
+export class ClaudeAnalyzer {
   async analyze(articles: RawArticle[], keywords: string[]): Promise<AnalysisResult> {
     if (articles.length === 0) {
       return { trends: [], insights: [], actions: [] }
     }
-
-    const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
     const articleSummaries = articles
       .map((a, i) => `[${i + 1}] ${a.title}\nSource: ${a.sourceName}\nURL: ${a.url}\n${a.summary}`)
@@ -46,14 +38,13 @@ ${articleSummaries}
 }
 
 규칙:
-- trends는 최대 3개
-- insights는 최대 3개
-- actions는 최대 3개
+- trends는 최대 5개
+- insights는 최대 5개
+- actions는 최대 5개
 - 모든 텍스트는 한국어로
 - category는 "study", "apply", "explore" 중 하나`
 
-    const response = await model.generateContent(prompt)
-    const text = response.response.text()
+    const text = await this.runClaude(prompt)
 
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -62,5 +53,26 @@ ${articleSummaries}
     } catch {
       return { trends: [], insights: [], actions: [] }
     }
+  }
+
+  private runClaude(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const child = spawn('/usr/local/bin/claude', ['--print'], {
+        env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
+        timeout: 120_000
+      })
+
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+      child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+      child.on('close', (code) => {
+        if (code !== 0) return reject(new Error(`claude exited ${code}: ${stderr}`))
+        resolve(stdout)
+      })
+      child.on('error', reject)
+      child.stdin.write(prompt)
+      child.stdin.end()
+    })
   }
 }

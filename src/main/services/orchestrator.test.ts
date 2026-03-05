@@ -23,7 +23,7 @@ vi.mock('./hn-collector', () => ({
 }))
 
 vi.mock('./analyzer', () => ({
-  GeminiAnalyzer: class {
+  ClaudeAnalyzer: class {
     async analyze(articles: any[]) {
       return {
         trends: [{ text: `Analyzed ${articles.length} articles`, relatedUrls: [] }],
@@ -36,7 +36,7 @@ vi.mock('./analyzer', () => ({
 
 describe('ResearchOrchestrator', () => {
   it('collects from all sources, deduplicates by URL, and analyzes', async () => {
-    const orchestrator = new ResearchOrchestrator('fake-key')
+    const orchestrator = new ResearchOrchestrator()
     const config = {
       rssSources: [{ name: 'Test', url: 'https://test.com/feed', enabled: true }],
       keywords: ['AI']

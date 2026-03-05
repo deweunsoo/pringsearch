@@ -1,3 +1,4 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 import { app, BrowserWindow, ipcMain, Notification, screen } from 'electron'
 import path from 'path'
 import os from 'os'
@@ -19,8 +20,10 @@ function createWindow(): void {
     height: 640,
     frame: false,
     transparent: true,
-    vibrancy: 'under-window',
+    hasShadow: true,
+    vibrancy: 'fullscreen-ui',
     visualEffectState: 'active',
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     resizable: true,
     minWidth: 360,
@@ -51,17 +54,20 @@ function createWindow(): void {
 
 async function runResearch(): Promise<void> {
   const config = storage.loadConfig()
-  if (!config.geminiApiKey) {
-    mainWindow?.webContents.send('research-complete', null)
-    return
-  }
 
   try {
-    const orchestrator = new ResearchOrchestrator(config.geminiApiKey)
+    const fs = require('fs')
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Starting research...\n`)
+    const orchestrator = new ResearchOrchestrator()
     const result = await orchestrator.run(config)
-    storage.saveResearch(result)
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Result: ${JSON.stringify(result).slice(0, 300)}\n`)
+    const hasContent = result.trends.length > 0 || result.insights.length > 0
 
-    mainWindow?.webContents.send('research-complete', result)
+    if (hasContent) {
+      storage.saveResearch(result)
+    }
+
+    mainWindow?.webContents.send('research-complete', hasContent ? result : null)
 
     if (config.notificationEnabled) {
       new Notification({
@@ -69,8 +75,11 @@ async function runResearch(): Promise<void> {
         body: result.trends[0]?.text || '새로운 리서치가 준비되었습니다.'
       }).show()
     }
-  } catch (error) {
-    console.error('Research failed:', error)
+  } catch (error: any) {
+    const fs = require('fs')
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] FAILED: ${error?.message || error}\n`)
+    console.error('[Research] Failed:', error?.message || error)
+    mainWindow?.webContents.send('research-complete', null)
   }
 }
 
@@ -87,6 +96,12 @@ function setupIPC(): void {
     scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch)
   })
   ipcMain.handle('run-research-now', () => runResearch())
+  ipcMain.handle('window-close', () => mainWindow?.hide())
+  ipcMain.handle('window-minimize', () => mainWindow?.minimize())
+  ipcMain.handle('window-maximize', () => {
+    if (mainWindow?.isMaximized()) mainWindow.unmaximize()
+    else mainWindow?.maximize()
+  })
 }
 
 app.whenReady().then(() => {

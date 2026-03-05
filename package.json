@@ -8,14 +8,14 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "verify": "bash scripts/verify.sh"
   },
   "keywords": [],
   "license": "MIT",
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
-    "@google/generative-ai": "^0.24.1",
     "@vitejs/plugin-react": "^5.1.4",
     "electron": "^40.6.1",
     "electron-vite": "^5.0.0",

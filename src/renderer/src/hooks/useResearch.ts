@@ -18,6 +18,7 @@ export function useResearch() {
   const [research, setResearch] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(() => new Date().toISOString().split('T')[0])
+  const loadingStartRef = { current: 0 }
 
   const loadResearch = useCallback(async (date: string) => {
     setLoading(true)
@@ -28,7 +29,9 @@ export function useResearch() {
   }, [])
 
   const runNow = useCallback(async () => {
+    setResearch(null)
     setLoading(true)
+    loadingStartRef.current = Date.now()
     await window.api.runResearchNow()
   }, [])
 
@@ -39,11 +42,15 @@ export function useResearch() {
     })
 
     const cleanup = window.api.onResearchComplete(result => {
-      if (result) {
-        setResearch(result)
-        setCurrentDate(result.date)
-      }
-      setLoading(false)
+      const elapsed = Date.now() - loadingStartRef.current
+      const minDelay = Math.max(0, 5000 - elapsed)
+      setTimeout(() => {
+        if (result) {
+          setResearch(result)
+          setCurrentDate(result.date)
+        }
+        setLoading(false)
+      }, minDelay)
     })
 
     return cleanup

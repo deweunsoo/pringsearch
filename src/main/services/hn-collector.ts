@@ -25,7 +25,7 @@ export class HackerNewsCollector {
       .filter((r): r is PromiseFulfilledResult<HNStory | null> => r.status === 'fulfilled')
       .map(r => r.value)
       .filter((story): story is HNStory => {
-        if (!story || story.type !== 'story' || story.score < 50) return false
+        if (!story || story.type !== 'story' || story.score < 10) return false
         const title = story.title.toLowerCase()
         return lowerKeywords.some(kw => title.includes(kw.toLowerCase()))
       })

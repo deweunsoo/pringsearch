@@ -1,35 +1,35 @@
 import { describe, it, expect, vi } from 'vitest'
-import { GeminiAnalyzer } from './analyzer'
+import { ClaudeAnalyzer } from './analyzer'
 import type { RawArticle } from '../../shared/types'
 
-vi.mock('@google/generative-ai', () => {
+const mockResponse = JSON.stringify({
+  trends: [
+    { text: 'AI agents are the new UX paradigm', relatedUrls: ['https://example.com/1'] }
+  ],
+  insights: [
+    { title: 'Agent UX is emerging', body: 'Detailed insight about agent UX patterns', relatedUrls: ['https://example.com/1'] }
+  ],
+  actions: [
+    { text: 'Study agent UX patterns', category: 'study' }
+  ]
+})
+
+vi.mock('child_process', () => {
+  const { EventEmitter } = require('events')
+  const { Readable, Writable } = require('stream')
   return {
-    GoogleGenerativeAI: class {
-      constructor() {}
-      getGenerativeModel() {
-        return {
-          generateContent: vi.fn().mockResolvedValue({
-            response: {
-              text: () => JSON.stringify({
-                trends: [
-                  { text: 'AI agents are the new UX paradigm', relatedUrls: ['https://example.com/1'] }
-                ],
-                insights: [
-                  { title: 'Agent UX is emerging', body: 'Detailed insight about agent UX patterns', relatedUrls: ['https://example.com/1'] }
-                ],
-                actions: [
-                  { text: 'Study agent UX patterns', category: 'study' }
-                ]
-              })
-            }
-          })
-        }
-      }
-    }
+    spawn: vi.fn(() => {
+      const child = new EventEmitter()
+      child.stdout = new Readable({ read() { this.push(mockResponse); this.push(null) } })
+      child.stderr = new Readable({ read() { this.push(null) } })
+      child.stdin = new Writable({ write(_c: any, _e: any, cb: any) { cb() } })
+      setTimeout(() => child.emit('close', 0), 10)
+      return child
+    })
   }
 })
 
-describe('GeminiAnalyzer', () => {
+describe('ClaudeAnalyzer', () => {
   const articles: RawArticle[] = [
     {
       title: 'AI Agents Transform UX',
@@ -42,7 +42,7 @@ describe('GeminiAnalyzer', () => {
   ]
 
   it('analyzes articles and returns structured result', async () => {
-    const analyzer = new GeminiAnalyzer('fake-api-key')
+    const analyzer = new ClaudeAnalyzer()
     const result = await analyzer.analyze(articles, ['AI Agent', 'UX Design'])
     expect(result.trends.length).toBeGreaterThan(0)
     expect(result.insights.length).toBeGreaterThan(0)
@@ -51,7 +51,7 @@ describe('GeminiAnalyzer', () => {
   })
 
   it('returns empty result for empty articles', async () => {
-    const analyzer = new GeminiAnalyzer('fake-api-key')
+    const analyzer = new ClaudeAnalyzer()
     const result = await analyzer.analyze([], ['AI'])
     expect(result.trends).toEqual([])
     expect(result.insights).toEqual([])

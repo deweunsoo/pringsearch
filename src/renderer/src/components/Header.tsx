@@ -17,9 +17,40 @@ const SettingsIcon = () => (
 export default function Header({ onSettingsClick, onRefresh, loading }: HeaderProps) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#4ade80' }} />
-        <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#1f2937', letterSpacing: '0.5px', margin: 0 }}>PRINGSEARCH</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="traffic-lights">
+          <button
+            className="traffic-btn"
+            onClick={() => (window as any).api.windowClose()}
+            style={{ background: '#FF5F57' }}
+            aria-label="Close"
+          >
+            <svg viewBox="0 0 12 12" fill="none" stroke="#4D0000" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M3 3l6 6M9 3l-6 6"/>
+            </svg>
+          </button>
+          <button
+            className="traffic-btn"
+            onClick={() => (window as any).api.windowMinimize()}
+            style={{ background: '#FEBC2E' }}
+            aria-label="Minimize"
+          >
+            <svg viewBox="0 0 12 12" fill="none" stroke="#995700" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M2 6h8"/>
+            </svg>
+          </button>
+          <button
+            className="traffic-btn"
+            onClick={() => (window as any).api.windowMaximize()}
+            style={{ background: '#28C840' }}
+            aria-label="Maximize"
+          >
+            <svg viewBox="0 0 12 12" fill="none" stroke="#006500" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M2 2l8 8M10 2l-8 8"/>
+            </svg>
+          </button>
+        </div>
+        <h1 style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.5px', margin: 0 }}>PRINGSEARCH</h1>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <button
@@ -27,6 +58,7 @@ export default function Header({ onSettingsClick, onRefresh, loading }: HeaderPr
           onClick={onRefresh}
           disabled={loading}
           style={{ opacity: loading ? 0.5 : 1 }}
+          data-tooltip="Clear"
         >
           <ChartIcon />
         </button>
@@ -34,7 +66,7 @@ export default function Header({ onSettingsClick, onRefresh, loading }: HeaderPr
           className="header-icon-btn"
           onClick={onSettingsClick}
           style={{ color: 'var(--color-gray-8)' }}
-          aria-label="Settings"
+          data-tooltip="Setting"
         >
           <SettingsIcon />
         </button>

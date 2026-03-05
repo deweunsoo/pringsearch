@@ -20,11 +20,11 @@ export class RssCollector {
 
   private async fetchFeed(source: RssSource): Promise<RawArticle[]> {
     const feed = await this.parser.parseURL(source.url)
-    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
     return (feed.items || [])
       .filter(item => {
         const pubDate = item.isoDate ? new Date(item.isoDate).getTime() : 0
-        return pubDate > oneDayAgo
+        return pubDate > sevenDaysAgo
       })
       .map(item => ({
         title: item.title || 'Untitled',

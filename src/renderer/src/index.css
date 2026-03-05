@@ -18,12 +18,12 @@ button, a, input, select, textarea {
 }
 
 .glass-panel {
-  padding: 18px 18px 16px;
-  background: transparent;
+  padding: 20px 20px 16px;
+  background: rgba(255, 255, 255, 0.6);
   border: none;
-  box-shadow: none;
-  border-radius: 24px;
-  color: rgba(0, 0, 0, 0.75);
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
+  color: #191F28;
 }
 ::-webkit-scrollbar {
   width: 4px;
@@ -40,6 +40,41 @@ button, a, input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.2);
+}
+
+/* macOS Traffic Light Buttons */
+.traffic-lights {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.traffic-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: opacity 150ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.traffic-btn svg {
+  opacity: 0;
+  transition: opacity 150ms;
+  width: 10px;
+  height: 10px;
+}
+
+.traffic-lights:hover .traffic-btn svg {
+  opacity: 1;
+}
+
+.traffic-btn:active {
+  filter: brightness(0.85);
 }
 
 .header-icon-btn {
@@ -61,4 +96,47 @@ button, a, input, select, textarea {
 
 .header-icon-btn:active {
   transform: scale(0.95);
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+@keyframes caterpillar-walk {
+  0%   { left: -40px; }
+  100% { left: 70px; }
+}
+
+.caterpillar-walk {
+  animation: caterpillar-walk 3s ease-in-out infinite alternate;
+}
+
+@keyframes cat-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.cat-bounce {
+  animation: cat-bounce 2s ease-in-out infinite;
 }

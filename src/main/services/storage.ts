@@ -22,7 +22,13 @@ export class StorageService {
   loadConfig(): AppConfig {
     try {
       const raw = fs.readFileSync(this.configPath, 'utf-8')
-      return { ...DEFAULT_CONFIG, ...JSON.parse(raw) }
+      const parsed = JSON.parse(raw)
+      // geminiApiKey → anthropicApiKey 마이그레이션
+      if (parsed.geminiApiKey && !parsed.anthropicApiKey) {
+        parsed.anthropicApiKey = parsed.geminiApiKey
+      }
+      delete parsed.geminiApiKey
+      return { ...DEFAULT_CONFIG, ...parsed }
     } catch {
       return { ...DEFAULT_CONFIG }
     }

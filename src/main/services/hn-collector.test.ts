@@ -9,7 +9,7 @@ describe('HackerNewsCollector', () => {
     mockFetch.mockReset()
   })
 
-  it('collects top AI/design stories with score >= 50', async () => {
+  it('collects top AI/design stories with score >= 10', async () => {
     mockFetch.mockImplementation((url: string) => {
       if (url.includes('topstories')) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve([1, 2, 3]) })
@@ -49,8 +49,9 @@ describe('HackerNewsCollector', () => {
 
     const collector = new HackerNewsCollector()
     const articles = await collector.collect(['AI', 'UX Design'])
-    expect(articles.length).toBe(1)
+    expect(articles.length).toBe(2)
     expect(articles[0].title).toBe('New AI Agent Framework')
+    expect(articles[1].title).toBe('UX Design with AI')
     expect(articles[0].source).toBe('hackernews')
   })
 })

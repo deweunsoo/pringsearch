@@ -39,38 +39,38 @@ export default function App() {
             loading={loading}
           />
 
-          <div className="scrollable" style={{ flex: 1, overflowY: 'auto', paddingRight: '0px' }}>
-            {loading && !research && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ opacity: 0.4 }}>
-                    <DocListIcon size={70} />
+          <div className="scrollable" style={{ flex: 1, overflowY: 'auto', marginRight: '-20px', paddingRight: '20px' }}>
+            {loading && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px' }}>
+                <div style={{ position: 'relative', marginBottom: '24px' }}>
+                  <div style={{ opacity: 0.35 }}>
+                    <DocListIcon size={80} />
                   </div>
-                  <div style={{ position: 'absolute', left: '-24px', top: '-8px' }}>
-                    <CaterpillarIcon size={50} />
+                  <div className="caterpillar-walk" style={{ position: 'absolute', top: '30px' }}>
+                    <CaterpillarIcon size={56} />
                   </div>
                 </div>
-                <p style={{ fontSize: '14px', fontWeight: 600, color: '#374151', marginTop: '8px' }}>자료를 가져오는 중...</p>
-                <p style={{ fontSize: '12px', color: '#9ca3af' }}>자료를 확인하고 있어요.</p>
+                <p style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>자료를 가져오는 중...</p>
+                <p style={{ fontSize: '16px', color: '#9ca3af', margin: 0, marginTop: '-2px' }}>자료를 확인하고 있어요.</p>
               </div>
             )}
 
             {!loading && !research && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px' }}>
-                <CatIcon size={70} />
-                <p style={{ fontSize: '14px', color: '#4b5563', textAlign: 'center', lineHeight: 1.6, marginTop: '8px' }}>
+                <div className="cat-bounce"><CatIcon size={70} /></div>
+                <p style={{ fontSize: '18px', color: '#4b5563', textAlign: 'center', lineHeight: 1.6, marginTop: '8px' }}>
                   아직 리서치 시간이 아닙니다.<br />
                   지금 리서치를 시작하시겠어요?
                 </p>
                 <button
                   onClick={runNow}
                   style={{
-                    marginTop: '4px',
-                    padding: '8px 24px',
+                    marginTop: '8px',
+                    padding: '14px 36px',
                     background: '#3b82f6',
                     color: '#ffffff',
-                    fontSize: '14px',
-                    fontWeight: 500,
+                    fontSize: '17px',
+                    fontWeight: 600,
                     borderRadius: '9999px',
                     border: 'none',
                     cursor: 'pointer'
@@ -81,7 +81,7 @@ export default function App() {
               </div>
             )}
 
-            {research && (
+            {!loading && research && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <TrendSummary trends={research.trends || []} />
                 <InsightCards insights={research.insights || []} />

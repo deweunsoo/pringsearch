@@ -1,17 +1,17 @@
 import { RssCollector } from './rss-collector'
 import { HackerNewsCollector } from './hn-collector'
-import { GeminiAnalyzer } from './analyzer'
+import { ClaudeAnalyzer } from './analyzer'
 import type { AppConfig, RawArticle, ResearchResult } from '../../shared/types'
 
 export class ResearchOrchestrator {
   private rssCollector: RssCollector
   private hnCollector: HackerNewsCollector
-  private analyzer: GeminiAnalyzer
+  private analyzer: ClaudeAnalyzer
 
-  constructor(apiKey: string) {
+  constructor() {
     this.rssCollector = new RssCollector()
     this.hnCollector = new HackerNewsCollector()
-    this.analyzer = new GeminiAnalyzer(apiKey)
+    this.analyzer = new ClaudeAnalyzer()
   }
 
   async run(config: AppConfig): Promise<ResearchResult> {

@@ -9,7 +9,7 @@ interface RssSource {
 interface AppConfig {
   scheduleHour: number
   scheduleMinute: number
-  geminiApiKey: string
+  anthropicApiKey: string
   rssSources: RssSource[]
   keywords: string[]
   notificationEnabled: boolean
@@ -100,13 +100,13 @@ export default function Settings({ onBack, onRunNow }: Props) {
         </div>
       </div>
 
-      {/* Gemini API Key */}
+      {/* Claude API Key */}
       <div style={section}>
-        <span style={label}>Gemini API Key</span>
+        <span style={label}>Claude API Key</span>
         <input
           type="password"
-          value={config.geminiApiKey}
-          onChange={e => save({ geminiApiKey: e.target.value })}
+          value={config.anthropicApiKey}
+          onChange={e => save({ anthropicApiKey: e.target.value })}
           placeholder="API Key 입력"
           style={input}
         />
