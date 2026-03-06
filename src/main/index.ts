@@ -1,5 +1,5 @@
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-import { app, BrowserWindow, ipcMain, Notification, screen, clipboard, net } from 'electron'
+import { app, BrowserWindow, ipcMain, Notification, screen, clipboard, net, shell } from 'electron'
 import { execFile } from 'child_process'
 import path from 'path'
 import os from 'os'
@@ -7,6 +7,8 @@ import { StorageService } from './services/storage'
 import { ResearchOrchestrator } from './services/orchestrator'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
+
+app.name = 'Pringsearch'
 
 const DATA_PATH = path.join(os.homedir(), 'ai-research-widget')
 const storage = new StorageService(DATA_PATH)
@@ -44,6 +46,11 @@ function createWindow(): void {
   mainWindow.setPosition(width - 480, height - 420)
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url)
+    return { action: 'deny' }
+  })
 
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -86,7 +93,8 @@ async function runResearch(): Promise<void> {
 function setupIPC(): void {
   ipcMain.handle('get-research', (_e, date: string) => storage.loadResearch(date))
   ipcMain.handle('get-today-research', () => {
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     return storage.loadResearch(today)
   })
   ipcMain.handle('get-research-dates', () => storage.listResearchDates())
@@ -152,6 +160,10 @@ function setupIPC(): void {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
+    app.dock.setIcon(path.join(__dirname, '../../build/icon.png'))
+  }
+
   createWindow()
   setupIPC()
 

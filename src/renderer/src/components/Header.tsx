@@ -56,19 +56,8 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
             </svg>
           </button>
         </div>
-        <h1 style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.5px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-          PRINGSEARCH
-          <svg width="20" height="19" viewBox="0 0 32 31" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="15.8125" cy="17" rx="14.5" ry="13.5" fill="#FDB731"/>
-            <path d="M9.04221 1.13304L3.75781 9.5L13.2578 4L10.6403 1.00853C10.1999 0.505286 9.39929 0.567667 9.04221 1.13304Z" fill="#FDB731"/>
-            <path d="M22.1944 1.05704L27.4897 9L17.9897 3.78947L20.6278 0.933252C21.067 0.457728 21.8354 0.518444 22.1944 1.05704Z" fill="#FDB731"/>
-            <circle cx="11.4453" cy="14.3125" r="1.8125" fill="#000006"/>
-            <circle cx="19.1328" cy="14.3125" r="1.8125" fill="#000006"/>
-            <path d="M12.5625 20.6875L15.8125 18.375L17.7188 19.6875" stroke="#FE5B00" strokeLinecap="round"/>
-            <path d="M16.2521 18.7063C16.0148 18.9619 15.6102 18.9619 15.3729 18.7063L14.3201 17.5728C13.9635 17.1889 14.2358 16.5645 14.7597 16.5645L16.8653 16.5645C17.3892 16.5645 17.6615 17.1889 17.3049 17.5728L16.2521 18.7063Z" fill="#FE5B00"/>
-            <path d="M3.75 17.1875L0.5 16.625M3.75 20.3125L0.5 21.0625" stroke="#000006" strokeLinecap="round"/>
-            <path d="M27.8022 17.1875L31 16.625M27.8022 20.3125L31 21.0625" stroke="#000006" strokeLinecap="round"/>
-          </svg>
+        <h1 style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.5px', margin: 0 }}>
+          Pringsearch
         </h1>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

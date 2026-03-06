@@ -1,10 +1,11 @@
-appId: com.ai-research-widget.app
-productName: AI Research Widget
+appId: com.pringsearch.app
+productName: Pringsearch
 directories:
   buildResources: build
   output: dist
 mac:
   category: public.app-category.productivity
+  icon: build/icon.icns
   target:
     - dmg
     - zip
