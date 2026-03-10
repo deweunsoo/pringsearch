@@ -205,12 +205,9 @@ export default function App() {
                 zIndex: 5,
                 display: 'flex',
                 justifyContent: 'center',
-                padding: '6px 0',
-                background: '#FFFFFF',
-                borderBottom: '1px solid #F2F4F6',
-                boxShadow: '0 1px 4px rgba(0, 0, 0, 0.04)'
+                padding: '6px 0'
               }}>
-                <span style={{ fontSize: '12px', color: '#8B95A1', fontWeight: 600, letterSpacing: '-0.2px' }}>{floatingLabel}</span>
+                <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500, letterSpacing: '-0.2px', background: '#FFFFFF', borderRadius: '9999px', padding: '5px 14px', border: '1px solid #D1D6DB' }}>{floatingLabel}</span>
               </div>
             )}
             {loading && sessions.length === 0 && (
@@ -455,21 +452,10 @@ export default function App() {
                 onClick={async () => {
                   const merged = mergedSessions()
                   if (!merged) return
-                  let folder = downloadPath
-                  if (!folder) {
-                    folder = await window.api.pickFolder()
-                    if (!folder) return
-                    setDownloadPath(folder)
-                    const config = await window.api.getConfig()
-                    await window.api.saveConfig({ ...config, downloadPath: folder })
-                  }
                   const now = new Date()
                   const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-                  const fileName = `리서치-${dateStr}.md`
-                  const filePath = `${folder}/${fileName}`
-                  await window.api.saveMarkdown(filePath, toMarkdown(merged))
-                  setShared('저장 완료!')
-                  setTimeout(() => setShared(false), 2000)
+                  const defaultName = `리서치-${dateStr}.md`
+                  await window.api.saveMarkdown(defaultName, toMarkdown(merged))
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
                 onMouseLeave={e => (e.currentTarget.style.background = '#FFFFFF')}

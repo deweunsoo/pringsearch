@@ -56,8 +56,11 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
             </svg>
           </button>
         </div>
-        <h1 style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.5px', margin: 0 }}>
+        <h1 style={{ fontSize: '15px', fontWeight: 500, color: '#6b7280', letterSpacing: '0.5px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
           Pringsearch
+          {import.meta.env.DEV && (
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#F59E0B', background: '#FEF3C7', borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.5px' }}>DEV</span>
+          )}
         </h1>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -66,7 +69,7 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
           onClick={onClear}
           disabled={loading}
           style={{ opacity: loading ? 0.5 : 1 }}
-          data-tooltip="Clear"
+          data-tooltip="초기화"
         >
           <ChartIcon />
         </button>
@@ -74,7 +77,7 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
           className="header-icon-btn"
           onClick={onSettingsClick}
           style={{ color: 'var(--color-gray-8)' }}
-          data-tooltip="Setting"
+          data-tooltip="설정"
         >
           <SettingsIcon />
         </button>

@@ -9,7 +9,7 @@ import { ResearchOrchestrator } from './services/orchestrator'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 
-app.name = 'Pringsearch'
+app.name = app.isPackaged ? 'Pringsearch' : 'Pringsearch DEV'
 
 const DATA_PATH = path.join(os.homedir(), 'ai-research-widget')
 const storage = new StorageService(DATA_PATH)
@@ -152,8 +152,14 @@ function setupIPC(): void {
       return null
     }
   })
-  ipcMain.handle('save-markdown', (_e, filePath: string, content: string) => {
-    fs.writeFileSync(filePath, content, 'utf-8')
+  ipcMain.handle('save-markdown', async (_e, defaultName: string, content: string) => {
+    const result = await dialog.showSaveDialog(mainWindow!, {
+      defaultPath: defaultName,
+      filters: [{ name: 'Markdown', extensions: ['md'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    fs.writeFileSync(result.filePath, content, 'utf-8')
+    return result.filePath
   })
   ipcMain.handle('pick-folder', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })

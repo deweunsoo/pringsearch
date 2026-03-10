@@ -49,7 +49,7 @@ describe('StorageService', () => {
       storage.saveResearch(mockResult)
       const loaded = storage.loadResearch('2026-02-27')
       expect(loaded).not.toBeNull()
-      expect(loaded!.trends[0].text).toBe('AI agents are trending')
+      expect(loaded![0].trends[0].text).toBe('AI agents are trending')
     })
 
     it('returns null for missing date', () => {
