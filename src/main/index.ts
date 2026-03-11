@@ -66,8 +66,11 @@ async function runResearch(): Promise<void> {
   try {
     const fs = require('fs')
     fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Starting research...\n`)
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const existingResults = storage.loadResearch(today) || []
     const orchestrator = new ResearchOrchestrator()
-    const result = await orchestrator.run(config)
+    const result = await orchestrator.run(config, existingResults)
     fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Result: ${JSON.stringify(result).slice(0, 300)}\n`)
     const hasContent = result.trends.length > 0 || result.insights.length > 0
 

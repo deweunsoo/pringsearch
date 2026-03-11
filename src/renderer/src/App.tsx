@@ -132,14 +132,20 @@ export default function App() {
 
   const mergedSessions = useCallback(() => {
     if (sessions.length === 0) return null
+    const allTrends = sessions.flatMap(s => s.trends || [])
+    const allInsights = sessions.flatMap(s => s.insights || [])
+    const allActions = sessions.flatMap(s => s.actions || [])
+    const seenTrends = new Set<string>()
+    const seenInsights = new Set<string>()
+    const seenActions = new Set<string>()
     return {
       date: sessions[0].date,
-      trends: sessions.flatMap(s => s.trends || []),
-      insights: sessions.flatMap(s => s.insights || []),
-      actions: sessions.flatMap(s => s.actions || []),
-      trendHeadline: sessions[0].trendHeadline,
-      insightHeadline: sessions[0].insightHeadline,
-      actionHeadline: sessions[0].actionHeadline,
+      trends: allTrends.filter(t => { const k = t.text; if (seenTrends.has(k)) return false; seenTrends.add(k); return true }),
+      insights: allInsights.filter(i => { const k = i.title; if (seenInsights.has(k)) return false; seenInsights.add(k); return true }),
+      actions: allActions.filter(a => { const k = a.text; if (seenActions.has(k)) return false; seenActions.add(k); return true }),
+      trendHeadline: sessions[sessions.length - 1].trendHeadline,
+      insightHeadline: sessions[sessions.length - 1].insightHeadline,
+      actionHeadline: sessions[sessions.length - 1].actionHeadline,
     }
   }, [sessions])
 

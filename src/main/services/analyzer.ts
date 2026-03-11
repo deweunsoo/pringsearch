@@ -11,7 +11,7 @@ interface AnalysisResult {
 }
 
 export class ClaudeAnalyzer {
-  async analyze(articles: RawArticle[], keywords: string[]): Promise<AnalysisResult> {
+  async analyze(articles: RawArticle[], keywords: string[], existingTrends: string[] = []): Promise<AnalysisResult> {
     if (articles.length === 0) {
       return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
     }
@@ -44,6 +44,7 @@ ${articleSummaries}
 }
 
 규칙:
+- 이미 생성된 트렌드와 절대 중복되지 않는 새로운 관점의 내용만 생성할 것${existingTrends.length > 0 ? `\n- 이미 다룬 내용 (중복 금지): ${existingTrends.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}
 - trendHeadline, insightHeadline, actionHeadline은 각 섹션의 내용을 하나의 구체적인 문장으로 요약
 - trends는 최대 5개
 - insights는 최대 5개

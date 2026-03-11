@@ -3,6 +3,7 @@ import { HackerNewsCollector } from './hn-collector'
 import { ClaudeAnalyzer } from './analyzer'
 import type { AppConfig, RawArticle, ResearchResult } from '../../shared/types'
 
+
 export class ResearchOrchestrator {
   private rssCollector: RssCollector
   private hnCollector: HackerNewsCollector
@@ -14,7 +15,7 @@ export class ResearchOrchestrator {
     this.analyzer = new ClaudeAnalyzer()
   }
 
-  async run(config: AppConfig): Promise<ResearchResult> {
+  async run(config: AppConfig, existingResults?: ResearchResult[]): Promise<ResearchResult> {
     const fetchDays = config.fetchPeriodDays || 7
     const [rssArticles, hnArticles] = await Promise.all([
       this.rssCollector.collect(config.rssSources, fetchDays),
@@ -24,6 +25,16 @@ export class ResearchOrchestrator {
     const allArticles = [...rssArticles, ...hnArticles]
     const seen = new Set<string>()
     const uniqueArticles: RawArticle[] = []
+
+    // Exclude articles already used in previous runs today
+    if (existingResults && existingResults.length > 0) {
+      for (const r of existingResults) {
+        for (const a of r.rawArticles || []) {
+          seen.add(a.url)
+        }
+      }
+    }
+
     for (const article of allArticles) {
       if (!seen.has(article.url)) {
         seen.add(article.url)
@@ -31,7 +42,8 @@ export class ResearchOrchestrator {
       }
     }
 
-    const analysis = await this.analyzer.analyze(uniqueArticles, config.keywords)
+    const existingTrends = existingResults?.flatMap(r => r.trends || []).map(t => t.text) || []
+    const analysis = await this.analyzer.analyze(uniqueArticles, config.keywords, existingTrends)
 
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
