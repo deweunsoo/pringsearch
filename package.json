@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Daily AI/UX research automation widget for macOS",
   "main": "out/main/index.js",
+  "bin": {
+    "pringsearch": "./bin/pringsearch.js"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -19,6 +22,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "electron": "^40.6.1",
     "node-cron": "^4.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -31,7 +35,6 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
-    "electron": "^40.6.1",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
     "tailwindcss": "^4.2.1",
