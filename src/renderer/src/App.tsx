@@ -6,6 +6,7 @@ import ActionItems from './components/ActionItems'
 import DateNav from './components/DateNav'
 import Settings from './components/Settings'
 import { useResearch } from './hooks/useResearch'
+import DiscussionChat from './components/DiscussionChat'
 import { CatIcon, CaterpillarIcon, DocListIcon } from './components/icons'
 
 function toMarkdown(research: any): string {
@@ -75,12 +76,13 @@ export default function App() {
   const [shared, setShared] = useState<string | false>(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [floatingLabel, setFloatingLabel] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState(0)
   const [downloadPath, setDownloadPath] = useState<string | null>(null)
+  const [discussions, setDiscussions] = useState<Record<number, any[]>>({})
+  const [discussionLoading, setDiscussionLoading] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
   const shareRef = useRef<HTMLDivElement>(null)
-  const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const syncHeight = useCallback(() => {
     if (showSettings && settingsRef.current) {
@@ -92,7 +94,7 @@ export default function App() {
     } else if (!loading && !research) {
       window.api.resizeWindow(520)
     }
-  }, [research, sessions, loading, showSettings])
+  }, [research, sessions, loading, showSettings, activeTab])
 
   useEffect(() => {
     requestAnimationFrame(syncHeight)
@@ -129,6 +131,20 @@ export default function App() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showShareMenu])
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      setActiveTab(sessions.length - 1)
+    } else {
+      setActiveTab(0)
+    }
+  }, [sessions.length])
+
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0 })
+    }
+  }, [activeTab])
 
   const mergedSessions = useCallback(() => {
     if (sessions.length === 0) return null
@@ -190,32 +206,69 @@ export default function App() {
             scrolled={scrolled}
           />
 
+          {(sessions.length > 1 || (loading && sessions.length > 0)) && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '6px 20px',
+              borderBottom: '1px solid #E5E7EB',
+              overflowX: 'auto',
+              flexShrink: 0,
+            }}>
+              {sessions.map((s, i) => {
+                const isActive = activeTab === i
+                const time = s.generatedAt ? (() => { const d = new Date(s.generatedAt); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` })() : ''
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setActiveTab(i)}
+                    style={{
+                      padding: '5px 12px',
+                      fontSize: '13px',
+                      fontWeight: isActive ? 600 : 400,
+                      color: isActive ? '#333D4B' : '#8B95A1',
+                      background: isActive ? '#F2F4F6' : 'transparent',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '-0.2px',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F8F9FA' }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                  >
+                    리서치 {i + 1}{time && <span style={{ fontSize: '11px', color: '#B0B8C1', marginLeft: '4px' }}>{time}</span>}
+                  </button>
+                )
+              })}
+              {loading && sessions.length > 0 && (
+                <button
+                  onClick={() => setActiveTab(sessions.length)}
+                  style={{
+                    padding: '5px 12px',
+                    fontSize: '13px',
+                    fontWeight: activeTab === sessions.length ? 600 : 400,
+                    color: activeTab === sessions.length ? '#333D4B' : '#8B95A1',
+                    background: activeTab === sessions.length ? '#F2F4F6' : 'transparent',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '-0.2px',
+                  }}
+                >
+                  리서치 {sessions.length + 1}<span style={{ fontSize: '11px', color: '#B0B8C1', marginLeft: '4px' }}>분석중</span>
+                </button>
+              )}
+            </div>
+          )}
+
           <div ref={contentRef} className="scrollable" onScroll={e => {
             const el = e.target as HTMLDivElement
             setScrolled(el.scrollTop > 0)
-            const scrollTop = el.scrollTop + el.getBoundingClientRect().top
-            let label: string | null = null
-            for (let i = sectionRefs.current.length - 1; i >= 0; i--) {
-              const ref = sectionRefs.current[i]
-              if (ref && ref.getBoundingClientRect().top < el.getBoundingClientRect().top + 10) {
-                label = `추가 리서치 #${i + 1}`
-                break
-              }
-            }
-            setFloatingLabel(label)
           }} style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            {floatingLabel && (
-              <div style={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 5,
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '6px 0'
-              }}>
-                <span style={{ fontSize: '12px', color: '#6B7280', fontWeight: 500, letterSpacing: '-0.2px', background: '#FFFFFF', borderRadius: '9999px', padding: '5px 14px', border: '1px solid #D1D6DB' }}>{floatingLabel}</span>
-              </div>
-            )}
             {loading && sessions.length === 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '4px' }}>
                 <div style={{ position: 'relative', marginBottom: '24px' }}>
@@ -267,21 +320,33 @@ export default function App() {
 
             {sessions.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', paddingBottom: '70px' }}>
-                {sessions.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-                    {i > 0 && (
-                      <div ref={el => { sectionRefs.current[i - 1] = el }} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0' }}>
-                        <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
-                        <span style={{ fontSize: '12px', color: '#B0B8C1', fontWeight: 500, whiteSpace: 'nowrap' }}>추가 리서치 #{i}</span>
-                        <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
-                      </div>
-                    )}
-                    <TrendSummary trends={s.trends || []} headline={s.trendHeadline} />
-                    <InsightCards insights={s.insights || []} headline={s.insightHeadline} />
-                    <ActionItems actions={s.actions || []} headline={s.actionHeadline} />
-                  </div>
-                ))}
-                {loading && (
+                {activeTab < sessions.length ? (
+                  <>
+                    <TrendSummary trends={sessions[activeTab].trends || []} headline={sessions[activeTab].trendHeadline} />
+                    <InsightCards insights={sessions[activeTab].insights || []} headline={sessions[activeTab].insightHeadline} />
+                    <ActionItems actions={sessions[activeTab].actions || []} headline={sessions[activeTab].actionHeadline} />
+                    <DiscussionChat
+                      messages={discussions[activeTab] || []}
+                      loading={discussionLoading}
+                      onStart={async () => {
+                        setDiscussionLoading(true)
+                        try {
+                          const session = sessions[activeTab]
+                          const result = await window.api.runDiscussion({
+                            trends: session.trends || [],
+                            insights: session.insights || [],
+                            actions: session.actions || [],
+                          })
+                          setDiscussions(prev => ({ ...prev, [activeTab]: result }))
+                        } catch (e) {
+                          console.error('Discussion failed:', e)
+                        } finally {
+                          setDiscussionLoading(false)
+                        }
+                      }}
+                    />
+                  </>
+                ) : loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '48px 0' }}>
                     <div style={{ position: 'relative', marginBottom: '24px' }}>
                       <div style={{ opacity: 0.35 }}>
@@ -294,7 +359,7 @@ export default function App() {
                     <p style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>추가 리서치 중...</p>
                     <p style={{ fontSize: '16px', color: '#9ca3af', margin: 0 }}>새로운 자료를 확인하고 있어요.</p>
                     <button
-                      onClick={cancelAdd}
+                      onClick={() => { cancelAdd(); setActiveTab(Math.max(0, sessions.length - 1)) }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       style={{
@@ -313,14 +378,12 @@ export default function App() {
                       중단하기
                     </button>
                   </div>
-                )}
+                ) : null}
                 {!loading && (<>
                   <button
                     onClick={() => {
+                      setActiveTab(sessions.length)
                       addResearch()
-                      setTimeout(() => {
-                        contentRef.current?.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'smooth' })
-                      }, 100)
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -495,6 +558,7 @@ export default function App() {
             if (sessions.length > 1) {
               if (!window.confirm('추가 리서치 내용이 사라져요. 이동할까요?')) return
             }
+            setActiveTab(0)
             loadResearch(date)
           }} />
         </>

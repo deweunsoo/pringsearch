@@ -1,5 +1,5 @@
 import { spawn } from 'child_process'
-import type { RawArticle, TrendItem, InsightItem, ActionItem } from '../../shared/types'
+import type { RawArticle, TrendItem, InsightItem, ActionItem, DiscussionMessage } from '../../shared/types'
 
 interface AnalysisResult {
   trendHeadline: string
@@ -62,6 +62,49 @@ ${articleSummaries}
       return JSON.parse(jsonMatch[0])
     } catch {
       return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
+    }
+  }
+
+  async generateDiscussion(research: { trends: TrendItem[]; insights: InsightItem[]; actions: ActionItem[] }): Promise<DiscussionMessage[]> {
+    const context = [
+      '## 트렌드',
+      ...research.trends.map(t => `- ${t.text}`),
+      '## 인사이트',
+      ...research.insights.map(i => `- ${i.title}: ${i.body}`),
+      '## 실무 적용',
+      ...research.actions.map(a => `- [${a.category}] ${a.text}`)
+    ].join('\n')
+
+    const prompt = `당신은 회사 동료 4명의 역할극을 수행합니다. 아래 리서치 결과를 보고 열띤 토론을 벌이세요.
+
+캐릭터 성격:
+- 사원: 열정적이고 새로운 것에 호기심이 많음. 순진한 질문도 하고, 감탄도 잘 함. 반말 사용.
+- 대리: 실무적이고 구현 가능성을 따짐. 현실적 관점에서 말함. 반말 사용.
+- 과장: 전략적 사고를 하고, 팀/프로젝트 관점에서 분석함. 반말 사용.
+- 사장: 비즈니스 임팩트 중심으로 큰 그림을 봄. 결단력 있는 발언. 반말 사용.
+
+리서치 결과:
+${context}
+
+규칙:
+- 8~12개의 메시지로 자연스러운 대화를 구성
+- 서로의 말에 반응하고, 동의하거나 반박하며 토론
+- 각 캐릭터의 성격이 드러나는 말투 사용
+- 한국어로 작성
+- 다음 JSON 배열 형식으로만 응답 (다른 텍스트 없이):
+[
+  { "role": "사원", "text": "..." },
+  { "role": "대리", "text": "..." }
+]`
+
+    const raw = await this.runClaude(prompt)
+
+    try {
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (!match) return []
+      return JSON.parse(match[0])
+    } catch {
+      return []
     }
   }
 

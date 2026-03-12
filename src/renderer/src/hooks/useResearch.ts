@@ -15,6 +15,7 @@ declare global {
       onResearchComplete: (callback: (result: any) => void) => () => void
       saveMarkdown: (filePath: string, content: string) => Promise<void>
       pickFolder: () => Promise<string | null>
+      runDiscussion: (research: any) => Promise<any[]>
     }
   }
 }

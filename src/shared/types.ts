@@ -36,6 +36,11 @@ export interface ResearchResult {
   actions: ActionItem[]
 }
 
+export interface DiscussionMessage {
+  role: '사원' | '대리' | '과장' | '사장'
+  text: string
+}
+
 export interface BookmarkItem {
   id: string
   type: 'trend' | 'insight' | 'action'

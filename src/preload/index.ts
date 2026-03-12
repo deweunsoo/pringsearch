@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('api', {
   shareText: (text: string) => ipcRenderer.invoke('share-text', text),
   saveMarkdown: (defaultName: string, content: string) => ipcRenderer.invoke('save-markdown', defaultName, content),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
+  runDiscussion: (research: any) => ipcRenderer.invoke('run-discussion', research),
   onResearchComplete: (callback: (result: any) => void) => {
     const handler = (_event: any, result: any) => callback(result)
     ipcRenderer.on('research-complete', handler)

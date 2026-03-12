@@ -6,6 +6,7 @@ import path from 'path'
 import os from 'os'
 import { StorageService } from './services/storage'
 import { ResearchOrchestrator } from './services/orchestrator'
+import { ClaudeAnalyzer } from './services/analyzer'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 
@@ -168,6 +169,10 @@ function setupIPC(): void {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
+  })
+  ipcMain.handle('run-discussion', async (_e, research) => {
+    const analyzer = new ClaudeAnalyzer()
+    return analyzer.generateDiscussion(research)
   })
   ipcMain.handle('window-close', () => mainWindow?.hide())
   ipcMain.handle('window-minimize', () => mainWindow?.minimize())
