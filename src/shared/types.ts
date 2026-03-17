@@ -73,12 +73,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   rssSources: [
     { name: 'MIT Tech Review - AI', url: 'https://www.technologyreview.com/feed/', enabled: true },
     { name: 'The Verge - AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', enabled: true },
-    { name: 'TechCrunch - AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', enabled: true },
-    { name: 'UX Collective', url: 'https://uxdesign.cc/feed', enabled: true },
-    { name: 'NN Group', url: 'https://www.nngroup.com/feed/rss/', enabled: true },
-    { name: 'Smashing Magazine', url: 'https://www.smashingmagazine.com/feed/', enabled: true }
+    { name: 'TechCrunch - AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', enabled: true }
   ],
-  keywords: ['AI Agent', 'UX Design', 'Generative UI', 'AI Design Tools'],
+  keywords: ['AI Agent', 'AI Coding', 'LLM', 'Generative AI'],
   notificationEnabled: true,
   dataPath: '~/ai-research-widget/data',
   fetchPeriodDays: 7
