@@ -30,9 +30,13 @@
 - **React** + **TypeScript**
 - **Claude API** (Anthropic)
 
-## 설치 및 실행
+## 개발 환경 셋업
 
 ```bash
+# 리포지토리 클론
+git clone https://github.com/deweunsoo/pringsearch.git
+cd pringsearch
+
 # 의존성 설치
 npm install
 
