@@ -24,6 +24,12 @@
 - 결과 복사 및 마크다운 저장
 - 북마크 기능
 
+## 설치
+
+[최신 릴리즈](https://github.com/deweunsoo/pringsearch/releases/latest)에서 `.dmg` 파일을 다운로드하여 설치하세요.
+
+> macOS Gatekeeper 경고가 뜨면: 앱을 **우클릭** → **열기** → **열기** 클릭
+
 ## 기술 스택
 
 - **Electron** + **electron-vite**
