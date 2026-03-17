@@ -319,6 +319,21 @@ export default function Settings({ onBack, onRunNow }: Props) {
           />
         </SectionCard>
 
+        {/* Anthropic API 키 */}
+        <SectionCard>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>Anthropic API 키</span>
+            <Tooltip text="Claude AI로 기사를 분석하려면 API 키가 필요해요. anthropic.com에서 발급받을 수 있어요." />
+          </div>
+          <input
+            value={config.anthropicApiKey || ''}
+            onChange={e => save({ anthropicApiKey: e.target.value })}
+            placeholder="sk-ant-..."
+            type="password"
+            style={inputStyle}
+          />
+        </SectionCard>
+
         {/* macOS 알림 */}
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
