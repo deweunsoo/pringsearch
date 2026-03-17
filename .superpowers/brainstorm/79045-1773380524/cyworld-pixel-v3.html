@@ -1,0 +1,251 @@
+<h2>픽셀 미니미 회의실</h2>
+<p class="subtitle">도트 느낌의 귀여운 캐릭터 + 싸이월드 미니룸</p>
+
+<style>
+  /* 픽셀 렌더링 */
+  .pixel-char { image-rendering: pixelated; }
+  .pixel-char canvas { image-rendering: pixelated; }
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Pringsearch — 리서치 토론</div>
+  <div class="mockup-body" style="padding:0;overflow:hidden;position:relative;height:540px;background:#C8C4A0;">
+
+    <!-- 벽 -->
+    <div style="position:absolute;top:0;left:0;right:0;height:42%;background:linear-gradient(180deg,#D6D2AE 0%,#CECA9E 100%);"></div>
+    <!-- 바닥 -->
+    <div style="position:absolute;bottom:0;left:0;right:0;height:58%;background:#D4C878;"></div>
+    <!-- 바닥 그리드 -->
+    <div style="position:absolute;bottom:0;left:0;right:0;height:58%;opacity:0.06;background:repeating-linear-gradient(45deg,transparent,transparent 30px,#000 30px,#000 31px),repeating-linear-gradient(-45deg,transparent,transparent 30px,#000 30px,#000 31px);"></div>
+    <!-- 벽-바닥 경계 -->
+    <div style="position:absolute;top:42%;left:0;right:0;height:3px;background:#A09C78;"></div>
+
+    <!-- 화이트보드 -->
+    <div style="position:absolute;top:40px;left:22px;width:90px;height:55px;background:#fff;border:3px solid #555;box-shadow:2px 3px 0 #999;">
+      <div style="padding:6px;">
+        <div style="width:55%;height:3px;background:#4285F4;margin:3px 0;"></div>
+        <div style="width:75%;height:3px;background:#10A37F;margin:3px 0;"></div>
+        <div style="width:35%;height:3px;background:#D97706;margin:3px 0;"></div>
+        <div style="width:60%;height:3px;background:#7C3AED;margin:3px 0;"></div>
+      </div>
+    </div>
+
+    <!-- 시계 -->
+    <div style="position:absolute;top:25px;right:50px;width:26px;height:26px;background:#fff;border:3px solid #555;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;box-shadow:1px 2px 0 #999;">🕑</div>
+
+    <!-- 화분 -->
+    <div style="position:absolute;top:95px;right:25px;">
+      <div style="font-size:22px;line-height:1;">🪴</div>
+    </div>
+
+    <!-- 회의 테이블 -->
+    <div style="position:absolute;bottom:150px;left:50%;transform:translateX(-50%);">
+      <div style="width:170px;height:60px;background:#7A5230;border:3px solid #4A3018;border-radius:6px;transform:perspective(200px) rotateX(10deg);box-shadow:0 6px 0 #4A3018;">
+        <div style="display:flex;justify-content:center;gap:14px;padding:10px;">
+          <div style="width:18px;height:12px;background:#ccc;border:2px solid #999;border-radius:1px;"></div>
+          <div style="width:10px;height:10px;background:#4285F4;border-radius:50%;border:2px solid #2962FF;"></div>
+          <div style="width:18px;height:12px;background:#E8E4D0;border:2px solid #999;border-radius:1px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 픽셀 캐릭터들 (SVG로 도트 그림) ====== -->
+
+    <!-- Gemini 사원 (왼쪽 앞) -->
+    <div style="position:absolute;bottom:100px;left:40px;text-align:center;z-index:10;">
+      <!-- 말풍선 -->
+      <div style="position:relative;background:#fff;border:3px solid #333;padding:6px 9px;font-size:11px;color:#333;max-width:135px;margin-bottom:10px;line-height:1.5;font-family:'Noto Sans KR',sans-serif;text-align:left;">
+        와 이거 진짜 대박이다!! AI 코딩 도구 성장 속도 ㄷㄷ
+        <div style="position:absolute;bottom:-9px;left:18px;width:14px;height:14px;background:#fff;border-right:3px solid #333;border-bottom:3px solid #333;transform:rotate(45deg);"></div>
+      </div>
+      <!-- 픽셀 캐릭터 (SVG) -->
+      <svg width="48" height="56" viewBox="0 0 12 14" style="image-rendering:pixelated;display:block;margin:0 auto;">
+        <!-- 머리카락 -->
+        <rect x="3" y="0" width="6" height="1" fill="#333"/>
+        <rect x="2" y="1" width="8" height="1" fill="#333"/>
+        <!-- 얼굴 -->
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 눈 -->
+        <rect x="4" y="3" width="1" height="2" fill="#333"/>
+        <rect x="7" y="3" width="1" height="2" fill="#333"/>
+        <!-- 볼터치 -->
+        <rect x="3" y="5" width="1" height="1" fill="#FFB0B0"/>
+        <rect x="8" y="5" width="1" height="1" fill="#FFB0B0"/>
+        <!-- 웃는 입 -->
+        <rect x="5" y="5" width="2" height="1" fill="#E07060"/>
+        <!-- 몸통 (파란색 - Gemini) -->
+        <rect x="2" y="7" width="8" height="4" fill="#4285F4"/>
+        <rect x="1" y="7" width="1" height="3" fill="#4285F4"/>
+        <rect x="10" y="7" width="1" height="3" fill="#4285F4"/>
+        <!-- 팔 -->
+        <rect x="0" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#2962FF"/>
+        <rect x="7" y="11" width="2" height="2" fill="#2962FF"/>
+        <!-- 발 -->
+        <rect x="2" y="13" width="3" height="1" fill="#1A47C2"/>
+        <rect x="7" y="13" width="3" height="1" fill="#1A47C2"/>
+      </svg>
+      <div style="font-size:10px;color:#333;font-weight:bold;margin-top:2px;font-family:'Noto Sans KR',sans-serif;">
+        <span style="color:#4285F4;">Gemini</span> 사원
+      </div>
+    </div>
+
+    <!-- GPT 대리 (오른쪽 앞) -->
+    <div style="position:absolute;bottom:95px;right:30px;text-align:center;z-index:10;">
+      <!-- 말풍선 -->
+      <div style="position:relative;background:#fff;border:3px solid #333;padding:6px 9px;font-size:11px;color:#333;max-width:135px;margin-bottom:10px;line-height:1.5;font-family:'Noto Sans KR',sans-serif;text-align:left;">
+        실무적으로 보면 파일럿 테스트가 먼저야.
+        <div style="position:absolute;bottom:-9px;right:16px;width:14px;height:14px;background:#fff;border-right:3px solid #333;border-bottom:3px solid #333;transform:rotate(45deg);"></div>
+      </div>
+      <!-- 픽셀 캐릭터 (SVG) -->
+      <svg width="48" height="56" viewBox="0 0 12 14" style="image-rendering:pixelated;display:block;margin:0 auto;">
+        <!-- 머리카락 (짧은 가르마) -->
+        <rect x="3" y="0" width="6" height="1" fill="#222"/>
+        <rect x="2" y="1" width="8" height="1" fill="#222"/>
+        <rect x="6" y="0" width="1" height="1" fill="#333"/>
+        <!-- 얼굴 -->
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 안경 -->
+        <rect x="3" y="3" width="3" height="2" fill="none" stroke="#333" stroke-width="0.5"/>
+        <rect x="7" y="3" width="3" height="2" fill="none" stroke="#333" stroke-width="0.5"/>
+        <rect x="6" y="3.5" width="1" height="0.5" fill="#333"/>
+        <!-- 눈 -->
+        <rect x="4" y="3.5" width="1" height="1" fill="#333"/>
+        <rect x="8" y="3.5" width="1" height="1" fill="#333"/>
+        <!-- 입 (일자) -->
+        <rect x="5" y="5.5" width="2" height="0.5" fill="#333"/>
+        <!-- 몸통 (녹색 - GPT) -->
+        <rect x="2" y="7" width="8" height="4" fill="#10A37F"/>
+        <rect x="1" y="7" width="1" height="3" fill="#10A37F"/>
+        <rect x="10" y="7" width="1" height="3" fill="#10A37F"/>
+        <!-- 팔 -->
+        <rect x="0" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <rect x="7" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <!-- 발 -->
+        <rect x="2" y="13" width="3" height="1" fill="#086B52"/>
+        <rect x="7" y="13" width="3" height="1" fill="#086B52"/>
+      </svg>
+      <div style="font-size:10px;color:#333;font-weight:bold;margin-top:2px;font-family:'Noto Sans KR',sans-serif;">
+        <span style="color:#10A37F;">GPT</span> 대리
+      </div>
+    </div>
+
+    <!-- Claude 과장 (왼쪽 뒤, 테이블 뒤) -->
+    <div style="position:absolute;bottom:215px;left:75px;text-align:center;z-index:10;">
+      <!-- 말풍선 -->
+      <div style="position:relative;background:#fff;border:3px solid #333;padding:6px 9px;font-size:11px;color:#333;max-width:145px;margin-bottom:10px;line-height:1.5;font-family:'Noto Sans KR',sans-serif;text-align:left;">
+        팀 관점에서 보면 교육 비용도 같이 따져봐야 해.
+        <div style="position:absolute;bottom:-9px;left:18px;width:14px;height:14px;background:#fff;border-right:3px solid #333;border-bottom:3px solid #333;transform:rotate(45deg);"></div>
+      </div>
+      <!-- 픽셀 캐릭터 (SVG) -->
+      <svg width="48" height="56" viewBox="0 0 12 14" style="image-rendering:pixelated;display:block;margin:0 auto;">
+        <!-- 머리카락 -->
+        <rect x="3" y="0" width="6" height="1" fill="#4A3020"/>
+        <rect x="2" y="1" width="8" height="1" fill="#4A3020"/>
+        <!-- 얼굴 -->
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 눈 (진지한 - 반쯤 감은) -->
+        <rect x="4" y="4" width="1" height="1" fill="#333"/>
+        <rect x="7" y="4" width="1" height="1" fill="#333"/>
+        <rect x="3" y="3.5" width="3" height="0.5" fill="#333"/>
+        <rect x="6" y="3.5" width="3" height="0.5" fill="#333"/>
+        <!-- 입 -->
+        <rect x="5" y="5.5" width="2" height="0.5" fill="#A07060"/>
+        <!-- 몸통 (오렌지 - Claude) -->
+        <rect x="2" y="7" width="8" height="4" fill="#D97706"/>
+        <rect x="1" y="7" width="1" height="3" fill="#D97706"/>
+        <rect x="10" y="7" width="1" height="3" fill="#D97706"/>
+        <!-- 팔 -->
+        <rect x="0" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="8" width="1" height="2" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="7" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="2" y="13" width="3" height="1" fill="#8B4E04"/>
+        <rect x="7" y="13" width="3" height="1" fill="#8B4E04"/>
+      </svg>
+      <div style="font-size:10px;color:#333;font-weight:bold;margin-top:2px;font-family:'Noto Sans KR',sans-serif;">
+        <span style="color:#D97706;">Claude</span> 과장
+      </div>
+    </div>
+
+    <!-- Perplexity 사장 (오른쪽 뒤, 약간 크게) -->
+    <div style="position:absolute;bottom:218px;right:55px;text-align:center;z-index:10;">
+      <!-- 말풍선 (사장 - 살짝 배경색) -->
+      <div style="position:relative;background:#FFFDE6;border:3px solid #333;padding:6px 9px;font-size:11px;color:#333;max-width:148px;margin-bottom:10px;line-height:1.5;font-family:'Noto Sans KR',sans-serif;text-align:left;">
+        데이터를 보면 답은 명확해. 바로 검토 들어가지.
+        <div style="position:absolute;bottom:-9px;right:16px;width:14px;height:14px;background:#FFFDE6;border-right:3px solid #333;border-bottom:3px solid #333;transform:rotate(45deg);"></div>
+      </div>
+      <!-- 픽셀 캐릭터 (SVG - 살짝 크게) -->
+      <svg width="56" height="64" viewBox="0 0 14 16" style="image-rendering:pixelated;display:block;margin:0 auto;">
+        <!-- 머리카락 (올빽) -->
+        <rect x="3" y="0" width="8" height="1" fill="#1a1a1a"/>
+        <rect x="2" y="1" width="10" height="1" fill="#1a1a1a"/>
+        <!-- 얼굴 -->
+        <rect x="2" y="2" width="10" height="6" fill="#FFD5B0"/>
+        <rect x="1" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <rect x="12" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <!-- 눈 (날카로운) -->
+        <rect x="4" y="4" width="2" height="1" fill="#333"/>
+        <rect x="8" y="4" width="2" height="1" fill="#333"/>
+        <!-- 눈썹 (진한) -->
+        <rect x="4" y="3" width="2" height="0.8" fill="#222"/>
+        <rect x="8" y="3" width="2" height="0.8" fill="#222"/>
+        <!-- 입 (굳은) -->
+        <rect x="6" y="6" width="2" height="0.7" fill="#333"/>
+        <!-- 넥타이 -->
+        <rect x="6" y="8" width="2" height="1" fill="#FFD700"/>
+        <rect x="6.3" y="9" width="1.4" height="1.5" fill="#FFD700"/>
+        <!-- 몸통 (보라 정장 - Perplexity) -->
+        <rect x="2" y="8" width="10" height="5" fill="#7C3AED"/>
+        <rect x="1" y="8" width="1" height="4" fill="#7C3AED"/>
+        <rect x="12" y="8" width="1" height="4" fill="#7C3AED"/>
+        <!-- 팔 -->
+        <rect x="0" y="9" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="13" y="9" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="13" width="3" height="2" fill="#5B21B6"/>
+        <rect x="8" y="13" width="3" height="2" fill="#5B21B6"/>
+        <!-- 구두 -->
+        <rect x="2" y="15" width="4" height="1" fill="#333"/>
+        <rect x="8" y="15" width="4" height="1" fill="#333"/>
+      </svg>
+      <div style="font-size:10px;color:#333;font-weight:bold;margin-top:2px;font-family:'Noto Sans KR',sans-serif;">
+        <span style="color:#7C3AED;">Perplexity</span> 사장
+      </div>
+    </div>
+
+    <!-- 하단 타이핑 인디케이터 -->
+    <div style="position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:10px 16px;background:rgba(255,255,255,0.92);border-top:3px solid #333;">
+      <svg width="20" height="20" viewBox="0 0 5 5" style="image-rendering:pixelated;">
+        <rect x="0" y="0" width="5" height="5" fill="#4285F4"/>
+        <rect x="1" y="1" width="1" height="1" fill="#fff"/>
+        <rect x="3" y="1" width="1" height="1" fill="#fff"/>
+        <rect x="1" y="3" width="3" height="1" fill="#fff"/>
+      </svg>
+      <span style="font-size:12px;color:#333;font-family:'Noto Sans KR',sans-serif;font-weight:500;">Gemini 사원이 입력 중</span>
+      <span style="font-size:16px;letter-spacing:3px;color:#333;animation:dotBlink 1.2s infinite steps(3);">···</span>
+    </div>
+
+    <style>
+      @keyframes dotBlink {
+        0% { opacity:0.2; }
+        33% { opacity:0.6; }
+        66% { opacity:1; }
+        100% { opacity:0.2; }
+      }
+    </style>
+
+  </div>
+</div>

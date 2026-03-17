@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#2a2a2a; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:-apple-system,'Noto Sans KR','Apple SD Gothic Neo',sans-serif; }
+
+  .chat-wrap {
+    width:420px; height:620px; display:flex; flex-direction:column;
+    border-radius:12px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  }
+
+  /* 헤더 */
+  .chat-header {
+    background:#fff; padding:14px 16px; display:flex; align-items:center; gap:10px;
+    border-bottom:1px solid #E5E7EB; flex-shrink:0;
+  }
+  .chat-header .back { font-size:18px; color:#666; cursor:pointer; }
+  .chat-header .title { font-size:15px; font-weight:600; color:#1A1A1A; letter-spacing:-0.3px; }
+  .chat-header .count { font-size:13px; color:#999; margin-left:2px; }
+  .chat-header .icons { margin-left:auto; display:flex; gap:12px; color:#888; font-size:16px; }
+
+  /* 채팅 영역 */
+  .chat-body {
+    flex:1; background:#9BBBD4; overflow-y:auto; padding:16px 14px 16px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .chat-body::-webkit-scrollbar { width:4px; }
+  .chat-body::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.15); border-radius:4px; }
+
+  /* 날짜 구분선 */
+  .date-divider {
+    text-align:center; margin:8px 0 12px;
+  }
+  .date-divider span {
+    font-size:11px; color:rgba(0,0,0,0.35); background:rgba(0,0,0,0.08);
+    padding:4px 12px; border-radius:12px;
+  }
+
+  /* 메시지 행 */
+  .msg-row {
+    display:flex; gap:8px; align-items:flex-start;
+    opacity:0; transform:translateY(12px);
+    animation:msgIn 0.35s ease-out forwards;
+  }
+
+  /* 아바타 */
+  .avatar {
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; color:#fff; position:relative;
+    box-shadow:0 1px 3px rgba(0,0,0,0.15);
+  }
+  .avatar img { width:100%; height:100%; border-radius:10px; object-fit:cover; }
+  /* 직급 뱃지 */
+  .avatar .badge {
+    position:absolute; bottom:-2px; right:-2px; font-size:7px;
+    background:#fff; color:#333; padding:1px 3px; border-radius:4px;
+    font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,0.15);
+  }
+
+  /* 아바타 자리 비움 (연속 메시지) */
+  .avatar-spacer { width:36px; flex-shrink:0; }
+
+  /* 메시지 내용 */
+  .msg-content { display:flex; flex-direction:column; gap:2px; max-width:260px; }
+  .msg-name { font-size:11.5px; font-weight:600; color:rgba(0,0,0,0.55); margin-bottom:1px; }
+  .msg-bubble-row { display:flex; align-items:flex-end; gap:4px; }
+
+  .msg-bubble {
+    background:#fff; border-radius:14px; padding:8px 12px;
+    font-size:13px; line-height:1.55; color:#1A1A1A; letter-spacing:-0.2px;
+    word-break:keep-all; box-shadow:0 1px 2px rgba(0,0,0,0.06);
+    position:relative;
+  }
+  /* 첫 메시지 왼쪽 뾰족 */
+  .msg-bubble.first { border-top-left-radius:4px; }
+
+  .msg-time {
+    font-size:10px; color:rgba(0,0,0,0.3); white-space:nowrap; flex-shrink:0;
+    align-self:flex-end;
+  }
+
+  /* 타이핑 인디케이터 */
+  .typing-row {
+    display:flex; gap:8px; align-items:flex-start;
+    opacity:0; transition:opacity 0.3s;
+  }
+  .typing-row.show { opacity:1; }
+  .typing-bubble {
+    background:#fff; border-radius:14px; border-top-left-radius:4px;
+    padding:10px 16px; display:flex; gap:4px; align-items:center;
+    box-shadow:0 1px 2px rgba(0,0,0,0.06);
+  }
+  .typing-dot {
+    width:6px; height:6px; background:#999; border-radius:50%;
+    animation:typingBounce 1.4s infinite ease-in-out;
+  }
+  .typing-dot:nth-child(2) { animation-delay:0.15s; }
+  .typing-dot:nth-child(3) { animation-delay:0.3s; }
+
+  @keyframes typingBounce {
+    0%,60%,100% { transform:translateY(0); opacity:0.4; }
+    30% { transform:translateY(-5px); opacity:1; }
+  }
+
+  @keyframes msgIn {
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* 하단 입력창 (장식) */
+  .chat-input {
+    background:#fff; padding:10px 14px; display:flex; align-items:center; gap:8px;
+    border-top:1px solid #E5E7EB; flex-shrink:0;
+  }
+  .chat-input .input-box {
+    flex:1; background:#F5F5F5; border:none; border-radius:18px;
+    padding:9px 14px; font-size:13px; color:#999; letter-spacing:-0.2px;
+  }
+  .chat-input .send-btn {
+    width:32px; height:32px; background:#FFE500; border:none; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    font-size:14px;
+  }
+</style>
+</head>
+<body>
+
+<div class="chat-wrap">
+  <!-- 헤더 -->
+  <div class="chat-header">
+    <span class="back">‹</span>
+    <span class="title">리서치 토론방</span>
+    <span class="count">4</span>
+    <div class="icons">
+      <span>🔍</span>
+      <span>☰</span>
+    </div>
+  </div>
+
+  <!-- 채팅 -->
+  <div class="chat-body" id="chatBody">
+    <div class="date-divider"><span>2026년 3월 13일 목요일</span></div>
+  </div>
+
+  <!-- 타이핑 표시 (채팅 영역 밖) -->
+
+  <!-- 입력창 -->
+  <div class="chat-input">
+    <div class="input-box">토론을 지켜보는 중...</div>
+    <button class="send-btn">↑</button>
+  </div>
+</div>
+
+<script>
+const BOTS = {
+  gemini: { name:'Gemini 사원', color:'#4285F4', badge:'사원', initial:'G' },
+  gpt:    { name:'GPT 대리',    color:'#10A37F', badge:'대리', initial:'O' },
+  claude: { name:'Claude 과장', color:'#D97706', badge:'과장', initial:'C' },
+  perplexity:{ name:'Perplexity 사장', color:'#7C3AED', badge:'사장', initial:'P' },
+};
+
+const MESSAGES = [
+  { who:'gemini', text:'와 오늘 리서치 결과 봤어?? AI 코딩 도구 성장 속도 미쳤다 ㄷㄷ', time:'오후 2:30' },
+  { who:'gemini', text:'Cursor가 연매출 20억 달러래 😱', time:'오후 2:30' },
+  { who:'gpt', text:'ㅋㅋ 흥분은 알겠는데 실무에서 바로 쓸 수 있는지가 중요하지', time:'오후 2:31' },
+  { who:'gpt', text:'파일럿 테스트부터 하자', time:'오후 2:31' },
+  { who:'claude', text:'팀 관점에서 보면 교육 비용도 같이 따져봐야 해', time:'오후 2:31' },
+  { who:'claude', text:'러닝커브가 만만치 않거든. 기존 워크플로우랑 충돌나는 부분도 있을 거고', time:'오후 2:32' },
+  { who:'gemini', text:'아 근데 진짜 써보면 바로 적응돼요!', time:'오후 2:32' },
+  { who:'gemini', text:'제가 어제 해봤는데 코드 자동완성이 진짜 장난 아님...', time:'오후 2:32' },
+  { who:'gpt', text:'자동완성이 좋은 건 맞는데 보안 이슈는 확인했어?', time:'오후 2:33' },
+  { who:'gpt', text:'내부 코드가 외부 서버로 전송될 수 있어. 유출 가능성 체크 필수야', time:'오후 2:33' },
+  { who:'perplexity', text:'데이터를 보면 답은 명확해', time:'오후 2:34' },
+  { who:'perplexity', text:'도입 기업 중 87%가 생산성 향상을 보고했고 평균 코딩 시간 40% 감소', time:'오후 2:34' },
+  { who:'claude', text:'그 수치는 알겠는데 우리 팀 상황에 맞는지는 다른 문제야', time:'오후 2:34' },
+  { who:'claude', text:'기술 스택이랑 보안 정책도 고려해야지', time:'오후 2:35' },
+  { who:'perplexity', text:'좋아. 2주 파일럿 후 결정하지. GPT 대리가 리드해', time:'오후 2:35' },
+  { who:'gpt', text:'넵 기준 잡고 보고서 올릴게요', time:'오후 2:36' },
+  { who:'gpt', text:'사원은 테스트 케이스 좀 만들어봐', time:'오후 2:36' },
+  { who:'gemini', text:'오 저요?! 좋아요!!', time:'오후 2:36' },
+  { who:'gemini', text:'진짜 열심히 해볼게요!! 💪💪💪', time:'오후 2:36' },
+];
+
+const chatBody = document.getElementById('chatBody');
+let msgIdx = 0;
+let lastWho = null;
+
+function createAvatar(who) {
+  const bot = BOTS[who];
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.style.background = bot.color;
+  avatar.textContent = bot.initial;
+  const badge = document.createElement('span');
+  badge.className = 'badge';
+  badge.textContent = bot.badge;
+  avatar.appendChild(badge);
+  return avatar;
+}
+
+function createTypingRow(who) {
+  const bot = BOTS[who];
+  const row = document.createElement('div');
+  row.className = 'typing-row';
+  row.id = 'typing-row';
+
+  const avatar = createAvatar(who);
+  row.appendChild(avatar);
+
+  const content = document.createElement('div');
+  content.className = 'msg-content';
+
+  const name = document.createElement('div');
+  name.className = 'msg-name';
+  name.textContent = bot.name;
+  content.appendChild(name);
+
+  const bubble = document.createElement('div');
+  bubble.className = 'typing-bubble';
+  bubble.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  content.appendChild(bubble);
+
+  row.appendChild(content);
+  return row;
+}
+
+function addMessage(who, text, time, isFirst) {
+  const bot = BOTS[who];
+  const row = document.createElement('div');
+  row.className = 'msg-row';
+
+  if (isFirst) {
+    row.appendChild(createAvatar(who));
+  } else {
+    const spacer = document.createElement('div');
+    spacer.className = 'avatar-spacer';
+    row.appendChild(spacer);
+  }
+
+  const content = document.createElement('div');
+  content.className = 'msg-content';
+
+  if (isFirst) {
+    const name = document.createElement('div');
+    name.className = 'msg-name';
+    name.textContent = bot.name;
+    content.appendChild(name);
+  }
+
+  const bubbleRow = document.createElement('div');
+  bubbleRow.className = 'msg-bubble-row';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble' + (isFirst ? ' first' : '');
+  bubble.textContent = text;
+  bubbleRow.appendChild(bubble);
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'msg-time';
+  timeEl.textContent = time;
+  bubbleRow.appendChild(timeEl);
+
+  content.appendChild(bubbleRow);
+  row.appendChild(content);
+
+  return row;
+}
+
+function showNext() {
+  if (msgIdx >= MESSAGES.length) {
+    return;
+  }
+
+  const msg = MESSAGES[msgIdx];
+  const isFirst = (msg.who !== lastWho);
+
+  // 타이핑 표시
+  const existingTyping = document.getElementById('typing-row');
+  if (existingTyping) existingTyping.remove();
+
+  const typingRow = createTypingRow(msg.who);
+  chatBody.appendChild(typingRow);
+  requestAnimationFrame(() => typingRow.classList.add('show'));
+  chatBody.scrollTop = chatBody.scrollHeight;
+
+  const delay = 600 + Math.random() * 1000;
+
+  setTimeout(() => {
+    // 타이핑 제거
+    typingRow.remove();
+
+    // 메시지 추가
+    const row = addMessage(msg.who, msg.text, msg.time, isFirst);
+    chatBody.appendChild(row);
+    chatBody.scrollTop = chatBody.scrollHeight;
+
+    lastWho = msg.who;
+    msgIdx++;
+
+    // 다음 메시지
+    if (msgIdx < MESSAGES.length) {
+      const nextMsg = MESSAGES[msgIdx];
+      const gap = (nextMsg.who === msg.who) ? 600 + Math.random() * 400 : 1200 + Math.random() * 1000;
+      setTimeout(showNext, gap);
+    }
+  }, delay);
+}
+
+setTimeout(showNext, 800);
+</script>
+</body>
+</html>

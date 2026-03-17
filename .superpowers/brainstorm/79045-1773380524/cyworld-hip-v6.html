@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#1a1a1a; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Noto Sans KR',sans-serif; }
+  .scene { width:560px; height:600px; position:relative; overflow:hidden; border:3px solid #333; border-radius:8px; }
+  svg.pixel { image-rendering:pixelated; image-rendering:crisp-edges; }
+
+  .bubble {
+    position:absolute; background:rgba(255,255,255,0.95); backdrop-filter:blur(8px);
+    border-radius:16px; padding:8px 12px 8px 12px;
+    font-size:11.5px; color:#333; min-width:150px; max-width:220px; line-height:1.55; text-align:left; word-break:keep-all;
+    opacity:0; transform:scale(0.85) translateY(8px);
+    transition: opacity 0.35s cubic-bezier(0.34,1.56,0.64,1), transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    z-index:20; box-shadow:0 4px 16px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15);
+  }
+  .bubble.show { opacity:1; transform:scale(1) translateY(0); }
+  .bubble .bubble-name {
+    font-size:10px; font-weight:700; margin-bottom:3px; letter-spacing:-0.2px;
+  }
+  .bubble .bubble-text {
+    font-size:11.5px; line-height:1.55; color:#2a2a2a;
+  }
+  /* 꼬리: SVG로 부드럽게 */
+  .bubble::after { content:none; }
+  .bubble .tail {
+    position:absolute; bottom:-8px; width:16px; height:10px;
+  }
+  .bubble .tail.tail-left { left:14px; }
+  .bubble .tail.tail-right { right:14px; transform:scaleX(-1); }
+
+  .char { position:absolute; text-align:center; z-index:10; cursor:pointer; }
+  .char:hover .char-body { transform:scale(1.08); }
+  .char-body { transition:transform 0.2s; }
+
+  @keyframes bounce { 0%,100%{transform:translateY(0) rotate(0)} 25%{transform:translateY(-8px) rotate(-3deg)} 50%{transform:translateY(0)} 75%{transform:translateY(-5px) rotate(3deg)} }
+  @keyframes nod { 0%,100%{transform:translateY(0) rotate(0)} 30%{transform:translateY(2px) rotate(3deg)} 60%{transform:translateY(0) rotate(-1deg)} }
+  @keyframes think { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-1px) rotate(-2deg)} }
+  @keyframes boss { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-1px)} }
+  @keyframes talking { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-4deg)} 75%{transform:rotate(4deg)} }
+  @keyframes heartFloat { 0%{opacity:0;transform:translateY(0) scale(0)} 30%{opacity:1;transform:translateY(-5px) scale(1)} 100%{opacity:0;transform:translateY(-18px) scale(0.6)} }
+  @keyframes dotPulse { 0%,80%,100%{opacity:0.2;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.2)} }
+  @keyframes steam { 0%{transform:translateY(0) scaleX(1);opacity:0.6} 50%{transform:translateY(-8px) scaleX(1.4);opacity:0.3} 100%{transform:translateY(-16px) scaleX(0.6);opacity:0} }
+
+  /* 네온 글로우 */
+  @keyframes neonPulse { 0%,100%{opacity:0.9;filter:drop-shadow(0 0 4px var(--c)) drop-shadow(0 0 8px var(--c))} 50%{opacity:1;filter:drop-shadow(0 0 6px var(--c)) drop-shadow(0 0 14px var(--c)) drop-shadow(0 0 20px var(--c))} }
+  @keyframes neonFlicker { 0%,19%,21%,23%,25%,54%,56%,100%{opacity:1;filter:drop-shadow(0 0 5px var(--c)) drop-shadow(0 0 12px var(--c))} 20%,24%,55%{opacity:0.5;filter:none} }
+  @keyframes vinylSpin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
+  @keyframes plantSway { 0%,100%{transform:rotate(-1deg)} 50%{transform:rotate(1deg)} }
+  @keyframes starTwinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+  @keyframes cityLight { 0%,100%{opacity:0.6} 50%{opacity:1} }
+  @keyframes eqBar { 0%,100%{height:3px} 50%{height:var(--h)} }
+  @keyframes ledFlow { 0%{background-position:0 0} 100%{background-position:200px 0} }
+  @keyframes smokeRise { 0%{transform:translateY(0) translateX(0);opacity:0.3} 50%{transform:translateY(-15px) translateX(5px);opacity:0.15} 100%{transform:translateY(-30px) translateX(-3px);opacity:0} }
+
+  .name-tag { font-size:10px; font-weight:bold; margin-top:3px; color:#ddd; text-shadow:0 0 6px rgba(255,255,255,0.3); }
+  .typing-bar {
+    position:absolute; bottom:0; left:0; right:0; display:flex; align-items:center;
+    gap:8px; padding:10px 16px; background:rgba(30,25,35,0.95); border-top:2px solid #444; z-index:30;
+  }
+  .typing-dots { display:flex; gap:3px; }
+  .typing-dots span { width:6px; height:6px; background:#aaa; border-radius:50%; animation:dotPulse 1.4s infinite ease-in-out; }
+  .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+</style>
+</head>
+<body>
+
+<div class="scene">
+
+  <!-- ====== 배경: 어두운 벽돌 벽 ====== -->
+  <div style="position:absolute;top:0;left:0;right:0;height:44%;background:#3A3530;"></div>
+  <!-- 벽돌 패턴 -->
+  <div style="position:absolute;top:0;left:0;right:0;height:44%;opacity:0.15;background:
+    repeating-linear-gradient(0deg,transparent,transparent 11px,#222 11px,#222 12px),
+    repeating-linear-gradient(90deg,transparent,transparent 24px,#222 24px,#222 25px);
+    background-size:25px 12px;"></div>
+  <!-- 벽돌 홀수줄 오프셋 -->
+  <div style="position:absolute;top:0;left:0;right:0;height:44%;opacity:0.08;background:
+    repeating-linear-gradient(0deg,transparent 0px,transparent 11px,transparent 11px,transparent 12px,transparent 12px,transparent 23px,#222 23px,#222 24px);
+    background-size:25px 24px;
+    background-position:12px 0;"></div>
+
+  <!-- ====== 바닥 (콘크리트 + 에폭시) ====== -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:56%;background:linear-gradient(180deg,#4A4540,#3D3835);"></div>
+  <!-- 에폭시 반사 -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:30%;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.03));"></div>
+  <!-- 벽-바닥 경계 -->
+  <div style="position:absolute;top:44%;left:0;right:0;height:2px;background:#555;"></div>
+
+  <!-- ====== LED 스트립 (벽 상단) ====== -->
+  <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FF6B9D,#C86BFF,#6BB5FF,#6BFFC8,#FFD56B,#FF6B9D);background-size:200px 100%;animation:ledFlow 3s linear infinite;"></div>
+
+  <!-- ====== 창문 (도시 야경) ====== -->
+  <div style="position:absolute;top:20px;left:50%;transform:translateX(-50%);width:130px;height:95px;background:linear-gradient(180deg,#0A0E1A,#1A1E35,#0D1525);border:4px solid #555;border-radius:2px;box-shadow:inset 0 0 20px rgba(0,0,0,0.5),0 0 15px rgba(100,140,255,0.08);overflow:hidden;">
+    <!-- 별 -->
+    <div style="position:absolute;top:5px;left:15px;width:2px;height:2px;background:#fff;border-radius:50%;animation:starTwinkle 2s infinite;"></div>
+    <div style="position:absolute;top:8px;right:20px;width:1.5px;height:1.5px;background:#fff;border-radius:50%;animation:starTwinkle 3s infinite 0.5s;"></div>
+    <div style="position:absolute;top:15px;left:40px;width:1px;height:1px;background:#fff;border-radius:50%;animation:starTwinkle 2.5s infinite 1s;"></div>
+    <div style="position:absolute;top:3px;right:35px;width:1.5px;height:1.5px;background:#FFE4A0;border-radius:50%;animation:starTwinkle 4s infinite 0.3s;"></div>
+    <div style="position:absolute;top:12px;left:70px;width:1px;height:1px;background:#fff;border-radius:50%;animation:starTwinkle 2.8s infinite 0.8s;"></div>
+    <!-- 달 -->
+    <div style="position:absolute;top:6px;right:12px;width:14px;height:14px;background:#FFFDE0;border-radius:50%;box-shadow:0 0 8px rgba(255,253,200,0.4);"></div>
+    <div style="position:absolute;top:5px;right:9px;width:10px;height:10px;background:#0A0E1A;border-radius:50%;"></div>
+    <!-- 빌딩들 (네온 불빛) -->
+    <div style="position:absolute;bottom:0;left:5px;width:16px;height:45px;background:#151A28;border-radius:1px 1px 0 0;">
+      <div style="position:absolute;top:5px;left:3px;width:2px;height:2px;background:#FFD56B;animation:cityLight 3s infinite;"></div>
+      <div style="position:absolute;top:12px;left:8px;width:2px;height:2px;background:#6BB5FF;animation:cityLight 2s infinite 0.3s;"></div>
+      <div style="position:absolute;top:20px;left:3px;width:2px;height:2px;background:#FF6B9D;animation:cityLight 4s infinite 0.8s;"></div>
+      <div style="position:absolute;top:28px;left:8px;width:2px;height:2px;background:#FFD56B;animation:cityLight 2.5s infinite 1.2s;"></div>
+    </div>
+    <div style="position:absolute;bottom:0;left:24px;width:20px;height:60px;background:#1A2030;border-radius:2px 2px 0 0;">
+      <div style="position:absolute;top:4px;left:4px;width:2px;height:2px;background:#6BFFC8;animation:cityLight 2.5s infinite 0.5s;"></div>
+      <div style="position:absolute;top:12px;left:10px;width:2px;height:2px;background:#C86BFF;animation:cityLight 3s infinite;"></div>
+      <div style="position:absolute;top:22px;left:4px;width:2px;height:2px;background:#FFD56B;animation:cityLight 2s infinite 0.7s;"></div>
+      <div style="position:absolute;top:32px;left:10px;width:2px;height:2px;background:#6BB5FF;animation:cityLight 3.5s infinite 1s;"></div>
+      <!-- 옥상 안테나 -->
+      <div style="position:absolute;top:-6px;left:9px;width:1px;height:6px;background:#444;"></div>
+      <div style="position:absolute;top:-8px;left:8px;width:3px;height:2px;background:#FF3030;border-radius:50%;animation:starTwinkle 1s infinite;"></div>
+    </div>
+    <div style="position:absolute;bottom:0;left:48px;width:14px;height:35px;background:#151A28;border-radius:1px 1px 0 0;">
+      <div style="position:absolute;top:6px;left:3px;width:2px;height:2px;background:#FF6B9D;animation:cityLight 2s infinite 0.2s;"></div>
+      <div style="position:absolute;top:16px;left:7px;width:2px;height:2px;background:#6BFFC8;animation:cityLight 3s infinite 0.9s;"></div>
+    </div>
+    <div style="position:absolute;bottom:0;right:20px;width:18px;height:52px;background:#1A2030;border-radius:1px 1px 0 0;">
+      <div style="position:absolute;top:5px;left:4px;width:2px;height:2px;background:#FFD56B;animation:cityLight 2s infinite 0.4s;"></div>
+      <div style="position:absolute;top:14px;left:10px;width:2px;height:2px;background:#6BB5FF;animation:cityLight 3s infinite 0.6s;"></div>
+      <div style="position:absolute;top:25px;left:4px;width:2px;height:2px;background:#C86BFF;animation:cityLight 2.5s infinite 1.1s;"></div>
+      <div style="position:absolute;top:35px;left:10px;width:2px;height:2px;background:#FF6B9D;animation:cityLight 4s infinite;"></div>
+    </div>
+    <div style="position:absolute;bottom:0;right:3px;width:14px;height:38px;background:#151A28;border-radius:1px 1px 0 0;">
+      <div style="position:absolute;top:8px;left:3px;width:2px;height:2px;background:#6BFFC8;animation:cityLight 3s infinite 0.3s;"></div>
+      <div style="position:absolute;top:18px;left:7px;width:2px;height:2px;background:#FFD56B;animation:cityLight 2s infinite 0.8s;"></div>
+    </div>
+  </div>
+
+  <!-- ====== 네온사인: "PRINGSEARCH" ====== -->
+  <div style="position:absolute;top:28px;left:15px;--c:#FF6B9D;animation:neonPulse 2s infinite ease-in-out;">
+    <div style="font-size:11px;font-weight:900;color:#FF6B9D;letter-spacing:1px;text-shadow:0 0 4px #FF6B9D,0 0 8px #FF6B9D,0 0 16px rgba(255,107,157,0.5);">PRING</div>
+    <div style="font-size:8px;font-weight:700;color:#FF6B9D;letter-spacing:2px;text-shadow:0 0 4px #FF6B9D,0 0 8px #FF6B9D;margin-top:-1px;">SEARCH</div>
+  </div>
+
+  <!-- ====== 네온사인: 커피컵 ====== -->
+  <div style="position:absolute;top:30px;right:15px;--c:#6BFFC8;animation:neonFlicker 4s infinite;">
+    <div style="font-size:22px;filter:drop-shadow(0 0 4px #6BFFC8) drop-shadow(0 0 8px #6BFFC8);">☕</div>
+  </div>
+
+  <!-- ====== 바이닐 레코드 (벽에 걸린) ====== -->
+  <div style="position:absolute;top:70px;left:12px;">
+    <div style="width:36px;height:36px;background:radial-gradient(circle,#222 30%,#111 31%,#111 45%,#1a1a1a 46%,#1a1a1a 48%,#111 49%);border-radius:50%;border:1px solid #444;animation:vinylSpin 4s linear infinite;">
+      <div style="position:absolute;top:50%;left:50%;width:8px;height:8px;background:#C85450;border-radius:50%;transform:translate(-50%,-50%);border:1px solid #A03030;"></div>
+    </div>
+  </div>
+  <div style="position:absolute;top:65px;left:55px;">
+    <div style="width:30px;height:30px;background:radial-gradient(circle,#222 30%,#111 31%,#111 45%,#1a1a1a 46%,#1a1a1a 48%,#111 49%);border-radius:50%;border:1px solid #444;animation:vinylSpin 6s linear infinite reverse;">
+      <div style="position:absolute;top:50%;left:50%;width:7px;height:7px;background:#4A78A8;border-radius:50%;transform:translate(-50%,-50%);border:1px solid #355A80;"></div>
+    </div>
+  </div>
+
+  <!-- ====== 이퀄라이저 (오른쪽 벽) ====== -->
+  <div style="position:absolute;top:72px;right:12px;display:flex;gap:2px;align-items:flex-end;height:30px;">
+    <div style="width:3px;background:#C86BFF;border-radius:1px;--h:18px;animation:eqBar 0.8s infinite ease-in-out;"></div>
+    <div style="width:3px;background:#C86BFF;border-radius:1px;--h:25px;animation:eqBar 0.6s infinite ease-in-out 0.1s;"></div>
+    <div style="width:3px;background:#FF6B9D;border-radius:1px;--h:15px;animation:eqBar 0.7s infinite ease-in-out 0.2s;"></div>
+    <div style="width:3px;background:#6BB5FF;border-radius:1px;--h:22px;animation:eqBar 0.5s infinite ease-in-out 0.15s;"></div>
+    <div style="width:3px;background:#6BFFC8;border-radius:1px;--h:28px;animation:eqBar 0.9s infinite ease-in-out 0.05s;"></div>
+    <div style="width:3px;background:#FFD56B;border-radius:1px;--h:12px;animation:eqBar 0.65s infinite ease-in-out 0.25s;"></div>
+    <div style="width:3px;background:#FF6B9D;border-radius:1px;--h:20px;animation:eqBar 0.75s infinite ease-in-out 0.3s;"></div>
+  </div>
+
+  <!-- ====== 몬스테라 화분 ====== -->
+  <div style="position:absolute;bottom:240px;right:8px;animation:plantSway 5s infinite ease-in-out;transform-origin:bottom center;z-index:2;">
+    <!-- 잎 -->
+    <svg width="40" height="45" viewBox="0 0 40 45">
+      <ellipse cx="20" cy="8" rx="12" ry="8" fill="#2D7A3A" transform="rotate(-15 20 8)"/>
+      <ellipse cx="12" cy="15" rx="10" ry="7" fill="#3A8B3A" transform="rotate(20 12 15)"/>
+      <ellipse cx="28" cy="14" rx="9" ry="6" fill="#358535" transform="rotate(-25 28 14)"/>
+      <ellipse cx="20" cy="20" rx="8" ry="5" fill="#2D7A3A" transform="rotate(5 20 20)"/>
+      <!-- 줄기 -->
+      <line x1="20" y1="22" x2="20" y2="40" stroke="#2D6A2A" stroke-width="3"/>
+    </svg>
+    <!-- 화분 -->
+    <div style="width:22px;height:16px;background:linear-gradient(180deg,#D08040,#B06830);border-radius:2px 2px 4px 4px;margin:-5px auto 0;border:2px solid #905020;"></div>
+  </div>
+
+  <!-- ====== 선인장 (왼쪽) ====== -->
+  <div style="position:absolute;bottom:242px;left:10px;z-index:2;">
+    <svg width="24" height="35" viewBox="0 0 24 35">
+      <rect x="9" y="5" width="6" height="20" fill="#3A8B4A" rx="3"/>
+      <rect x="2" y="10" width="5" height="10" fill="#358540" rx="2.5"/>
+      <line x1="4.5" y1="10" x2="9" y2="13" stroke="#358540" stroke-width="2.5"/>
+      <rect x="17" y="8" width="5" height="8" fill="#3A8B4A" rx="2.5"/>
+      <line x1="19.5" y1="8" x2="15" y2="11" stroke="#3A8B4A" stroke-width="2.5"/>
+      <!-- 꽃 -->
+      <circle cx="12" cy="4" r="2.5" fill="#FF6B9D"/>
+      <circle cx="12" cy="4" r="1" fill="#FFD56B"/>
+    </svg>
+    <div style="width:18px;height:10px;background:#D08040;border-radius:1px 1px 3px 3px;margin:0 auto;border:1.5px solid #905020;"></div>
+  </div>
+
+  <!-- ====== 회의 테이블 (인더스트리얼) ====== -->
+  <div style="position:absolute;bottom:140px;left:50%;transform:translateX(-50%);z-index:3;">
+    <div style="width:185px;height:65px;background:linear-gradient(135deg,#5A5550,#4A4540);border:3px solid #3A3530;border-radius:4px;transform:perspective(200px) rotateX(10deg);box-shadow:0 6px 0 #2A2520;">
+      <!-- 메탈 다리 디테일 -->
+      <div style="position:absolute;bottom:-6px;left:10px;width:3px;height:6px;background:#666;"></div>
+      <div style="position:absolute;bottom:-6px;right:10px;width:3px;height:6px;background:#666;"></div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:10px;padding:10px;">
+        <!-- 맥북 -->
+        <div style="width:20px;height:13px;background:#C0C0C0;border:1.5px solid #999;border-radius:1px;position:relative;">
+          <div style="width:14px;height:7px;background:#2A2A3A;margin:1px auto;border-radius:0.5px;"></div>
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:4px;height:1px;background:#999;"></div>
+        </div>
+        <!-- 커피 + 스팀 -->
+        <div style="position:relative;">
+          <div style="width:11px;height:9px;background:#2A2520;border:2px solid #444;border-radius:0 0 3px 3px;"></div>
+          <div style="position:absolute;top:-4px;left:2px;width:1.5px;height:4px;background:rgba(255,255,255,0.25);border-radius:2px;animation:steam 1.8s infinite;"></div>
+          <div style="position:absolute;top:-5px;left:5.5px;width:1.5px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;animation:steam 1.8s infinite 0.6s;"></div>
+        </div>
+        <!-- 에어팟 케이스 -->
+        <div style="width:10px;height:12px;background:#F0F0F0;border-radius:5px 5px 3px 3px;border:1px solid #ddd;"></div>
+        <!-- 아이패드 -->
+        <div style="width:15px;height:20px;background:#333;border:1.5px solid #555;border-radius:2px;">
+          <div style="width:11px;height:14px;background:#4A78A8;margin:1.5px auto;border-radius:1px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 러그 (기하학 패턴) ====== -->
+  <div style="position:absolute;bottom:100px;left:50%;transform:translateX(-50%);width:240px;height:85px;background:#3A3530;border:2px solid #555;border-radius:4px;opacity:0.6;z-index:1;">
+    <div style="width:100%;height:100%;opacity:0.3;background:repeating-linear-gradient(45deg,transparent,transparent 10px,#C86BFF 10px,#C86BFF 11px),repeating-linear-gradient(-45deg,transparent,transparent 10px,#6BB5FF 10px,#6BB5FF 11px);"></div>
+  </div>
+
+  <!-- ====== 네온 "TALK" (벽 아래) ====== -->
+  <div style="position:absolute;top:107px;left:50%;transform:translateX(-50%);--c:#6BB5FF;animation:neonPulse 3s infinite ease-in-out 0.5s;">
+    <div style="font-size:13px;font-weight:900;color:#6BB5FF;letter-spacing:4px;text-shadow:0 0 4px #6BB5FF,0 0 10px #6BB5FF,0 0 20px rgba(107,181,255,0.4);">TALK</div>
+  </div>
+
+  <!-- ====== 캐릭터들 ====== -->
+
+  <!-- Gemini 사원 -->
+  <div class="char" id="gemini" style="bottom:90px;left:18px;" onclick="emote('gemini')">
+    <div class="bubble left" id="bubble-gemini" style="bottom:78px;left:-10px;"></div>
+    <div id="emote-gemini" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:bounce 1.8s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <rect x="3" y="0" width="6" height="1" fill="#444"/>
+        <rect x="2" y="1" width="8" height="1" fill="#444"/>
+        <rect x="2" y="0" width="2" height="1" fill="#444"/>
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="3.5" y="3" width="2" height="2" fill="#333" rx="0.5"/>
+        <rect x="4" y="3" width="1" height="1" fill="#fff"/>
+        <rect x="6.5" y="3" width="2" height="2" fill="#333" rx="0.5"/>
+        <rect x="7" y="3" width="1" height="1" fill="#fff"/>
+        <rect x="2.5" y="5" width="1.5" height="1" fill="#FFB0B0" rx="0.5"/>
+        <rect x="8" y="5" width="1.5" height="1" fill="#FFB0B0" rx="0.5"/>
+        <rect x="5" y="5.5" width="2" height="1" fill="#E07060" rx="0.5"/>
+        <rect x="2" y="7" width="8" height="4" fill="#4285F4" rx="1"/>
+        <rect x="1" y="8" width="1" height="2" fill="#4285F4"/>
+        <rect x="10" y="8" width="1" height="2" fill="#4285F4"/>
+        <rect x="0" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="9" width="1" height="1" fill="#FFD5B0"/>
+        <rect x="11" y="8" width="2" height="2" fill="#C4956A" rx="0.3"/>
+        <rect x="3" y="11" width="2" height="2" fill="#2962FF"/>
+        <rect x="7" y="11" width="2" height="2" fill="#2962FF"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#1A47C2" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#1A47C2" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#6BB5FF;">Gemini</span> 사원</div>
+  </div>
+
+  <!-- GPT 대리 -->
+  <div class="char" id="gpt" style="bottom:85px;right:12px;" onclick="emote('gpt')">
+    <div class="bubble right" id="bubble-gpt" style="bottom:78px;right:-10px;"></div>
+    <div id="emote-gpt" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:nod 3s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <rect x="3" y="0" width="6" height="1" fill="#222"/>
+        <rect x="2" y="1" width="8" height="1" fill="#222"/>
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="3" y="3" width="2.5" height="2" fill="none" stroke="#888" stroke-width="0.6" rx="0.3"/>
+        <rect x="6.5" y="3" width="2.5" height="2" fill="none" stroke="#888" stroke-width="0.6" rx="0.3"/>
+        <rect x="5.5" y="3.8" width="1" height="0.4" fill="#888"/>
+        <rect x="3.8" y="3.5" width="1" height="1" fill="#333"/>
+        <rect x="7.2" y="3.5" width="1" height="1" fill="#333"/>
+        <rect x="5" y="5.5" width="2" height="0.6" fill="#333" rx="0.3"/>
+        <rect x="2" y="7" width="8" height="4" fill="#10A37F" rx="1"/>
+        <rect x="1" y="8" width="1" height="2" fill="#10A37F"/>
+        <rect x="10" y="8" width="1" height="2" fill="#10A37F"/>
+        <rect x="0" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="3" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <rect x="7" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#086B52" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#086B52" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#6BFFC8;">GPT</span> 대리</div>
+  </div>
+
+  <!-- Claude 과장 -->
+  <div class="char" id="claude" style="bottom:215px;left:55px;" onclick="emote('claude')">
+    <div class="bubble left" id="bubble-claude" style="bottom:78px;left:-10px;"></div>
+    <div id="emote-claude" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:think 4s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <rect x="3" y="0" width="6" height="1" fill="#4A3020"/>
+        <rect x="2" y="1" width="8" height="1" fill="#4A3020"/>
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="3.5" y="3.5" width="2" height="0.8" fill="#333"/>
+        <rect x="6.5" y="3.5" width="2" height="0.8" fill="#333"/>
+        <rect x="4" y="3.8" width="1" height="1" fill="#333"/>
+        <rect x="7" y="3.8" width="1" height="1" fill="#333"/>
+        <rect x="5" y="5.5" width="2" height="0.5" fill="#A07060"/>
+        <rect x="2" y="7" width="8" height="4" fill="#D97706" rx="1"/>
+        <rect x="3" y="8" width="6" height="1.5" fill="#FFD5B0" rx="0.5"/>
+        <rect x="3" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="7" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#8B4E04" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#8B4E04" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#FFD56B;">Claude</span> 과장</div>
+  </div>
+
+  <!-- Perplexity 사장 -->
+  <div class="char" id="perplexity" style="bottom:220px;right:35px;" onclick="emote('perplexity')">
+    <div class="bubble right" id="bubble-perplexity" style="bottom:88px;right:-10px;"></div>
+    <div id="emote-perplexity" style="position:absolute;top:-25px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:boss 3s infinite ease-in-out;">
+      <svg class="pixel" width="56" height="64" viewBox="0 0 14 16">
+        <rect x="3" y="0" width="8" height="1" fill="#1a1a1a"/>
+        <rect x="2" y="1" width="10" height="1" fill="#1a1a1a"/>
+        <rect x="2" y="2" width="10" height="6" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <rect x="12" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <rect x="4" y="3.5" width="2" height="0.7" fill="#222"/>
+        <rect x="8" y="3.5" width="2" height="0.7" fill="#222"/>
+        <rect x="4.5" y="4" width="1.5" height="1.5" fill="#333"/>
+        <rect x="5" y="4" width="0.5" height="0.5" fill="#fff"/>
+        <rect x="8.5" y="4" width="1.5" height="1.5" fill="#333"/>
+        <rect x="9" y="4" width="0.5" height="0.5" fill="#fff"/>
+        <rect x="6" y="6.5" width="2" height="0.6" fill="#333"/>
+        <rect x="6.2" y="8.2" width="1.6" height="1" fill="#FFD700"/>
+        <rect x="6.5" y="9.2" width="1" height="2" fill="#FFD700"/>
+        <rect x="2" y="8" width="10" height="5" fill="#7C3AED" rx="1"/>
+        <rect x="1" y="9" width="1" height="3" fill="#7C3AED"/>
+        <rect x="12" y="9" width="1" height="3" fill="#7C3AED"/>
+        <rect x="0" y="10" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="13" y="10" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="3" y="13" width="3" height="2" fill="#5B21B6"/>
+        <rect x="8" y="13" width="3" height="2" fill="#5B21B6"/>
+        <rect x="2.5" y="15" width="4" height="1" fill="#333" rx="0.3"/>
+        <rect x="7.5" y="15" width="4" height="1" fill="#333" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#C86BFF;">Perplexity</span> 사장</div>
+  </div>
+
+  <!-- 타이핑 바 -->
+  <div class="typing-bar" id="typing-bar" style="display:none;">
+    <div id="typing-avatar" style="width:20px;height:20px;border:2px solid #555;border-radius:4px;"></div>
+    <span id="typing-name" style="font-size:12px;color:#ccc;font-weight:500;"></span>
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<script>
+const CHARS={gemini:{name:'Gemini 사원',color:'#4285F4',emotes:['✨','🤩','💡','🎉']},gpt:{name:'GPT 대리',color:'#10A37F',emotes:['🤔','📋','💻','👍']},claude:{name:'Claude 과장',color:'#D97706',emotes:['🧐','📊','⚠️','💭']},perplexity:{name:'Perplexity 사장',color:'#7C3AED',emotes:['📈','💼','🔥','👊']}};
+const MESSAGES=[
+  {who:'gemini',text:'와!! 오늘 리서치 봤어?? AI 코딩 도구 성장 속도가 미쳤어 ㄷㄷㄷ',emote:'🤩'},
+  {who:'gpt',text:'ㅋㅋ 흥분은 알겠는데, 실무에서 쓸 수 있는지가 중요하지. 파일럿부터 해보자.',emote:'🤔'},
+  {who:'claude',text:'팀 관점에서 보면 교육 비용도 같이 따져봐야 해. 러닝커브가 만만치 않거든.',emote:'🧐'},
+  {who:'gemini',text:'아 근데 진짜 써보면 바로 적응돼요! 제가 어제 해봤는데 코드 자동완성이 진짜...',emote:'✨'},
+  {who:'gpt',text:'자동완성이 좋은 건 맞는데, 보안 이슈는 확인했어? 내부 코드 유출 가능성도 있어.',emote:'📋'},
+  {who:'perplexity',text:'데이터를 보면 답은 명확해. 도입 기업 중 87%가 생산성 향상을 보고했어.',emote:'📈'},
+  {who:'claude',text:'그 수치는 알겠는데, 우리 팀 상황에 맞는지는 다른 문제야. 기술 스택도 고려해야지.',emote:'⚠️'},
+  {who:'perplexity',text:'좋아. 그러면 2주 파일럿 후 결정하지. GPT 대리가 리드해.',emote:'💼'},
+  {who:'gpt',text:'넵, 기준 잡고 보고서 올릴게요. 사원은 테스트 케이스 좀 만들어봐.',emote:'👍'},
+  {who:'gemini',text:'오 저요?! 좋아요!! 진짜 열심히 해볼게요!! 💪💪',emote:'🎉'},
+];
+let msgIdx=0,isAnimating=false;
+function showTyping(who){const bar=document.getElementById('typing-bar'),av=document.getElementById('typing-avatar'),nm=document.getElementById('typing-name');av.style.background=CHARS[who].color;nm.textContent=CHARS[who].name+'이 입력 중';bar.style.display='flex';}
+function hideTyping(){document.getElementById('typing-bar').style.display='none';}
+function showBubble(who,text){
+  document.querySelectorAll('.bubble').forEach(b=>b.classList.remove('show'));
+  const bubble=document.getElementById('bubble-'+who);
+  const info=CHARS[who];
+  const isLeft=bubble.classList.contains('left');
+  const tailDir=isLeft?'tail-left':'tail-right';
+  bubble.innerHTML=`
+    <div class="bubble-name" style="color:${info.color}">${info.name}</div>
+    <div class="bubble-text">${text}</div>
+    <svg class="tail ${tailDir}" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 0C0 0 3 0 6 4C9 8 12 10 16 10C11 10 6 8 4 6C2 4 0 2 0 0Z" fill="rgba(255,255,255,0.95)"/>
+    </svg>
+  `;
+  bubble.classList.add('show');
+}
+function showEmoteEffect(who,emoji){const el=document.getElementById('emote-'+who);el.textContent=emoji;el.style.animation='none';el.offsetHeight;el.style.animation='heartFloat 1.2s ease-out forwards';}
+function setCharAnimation(who,anim){document.querySelector('#'+who+' .char-body').style.animation=anim;}
+function nextMessage(){if(isAnimating||msgIdx>=MESSAGES.length){if(msgIdx>=MESSAGES.length){msgIdx=0;setTimeout(nextMessage,2000);}return;}isAnimating=true;const msg=MESSAGES[msgIdx];showTyping(msg.who);setCharAnimation(msg.who,'talking 0.4s infinite ease-in-out');const t=800+Math.random()*1200;setTimeout(()=>{hideTyping();showBubble(msg.who,msg.text);showEmoteEffect(msg.who,msg.emote);setTimeout(()=>{const a={gemini:'bounce 1.8s infinite ease-in-out',gpt:'nod 3s infinite ease-in-out',claude:'think 4s infinite ease-in-out',perplexity:'boss 3s infinite ease-in-out'};setCharAnimation(msg.who,a[msg.who]);},600);msgIdx++;isAnimating=false;setTimeout(nextMessage,2500+Math.random()*1500);},t);}
+function emote(who){const info=CHARS[who];showEmoteEffect(who,info.emotes[Math.floor(Math.random()*info.emotes.length)]);}
+setTimeout(nextMessage,1000);
+</script>
+</body>
+</html>

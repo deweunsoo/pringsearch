@@ -11,3 +11,7 @@ mac:
     - zip
 dmg:
   artifactName: ${name}-${version}.${ext}
+publish:
+  provider: github
+  owner: deweunsoo
+  repo: pringsearch

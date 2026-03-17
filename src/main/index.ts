@@ -9,6 +9,7 @@ import { ResearchOrchestrator } from './services/orchestrator'
 import { ClaudeAnalyzer } from './services/analyzer'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
+import { autoUpdater } from 'electron-updater'
 
 app.name = app.isPackaged ? 'Pringsearch' : 'Pringsearch DEV'
 
@@ -195,6 +196,10 @@ app.whenReady().then(() => {
   const config = storage.loadConfig()
   scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch)
   trayManager.create(mainWindow!, runResearch)
+
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdatesAndNotify()
+  }
 })
 
 app.on('window-all-closed', () => {

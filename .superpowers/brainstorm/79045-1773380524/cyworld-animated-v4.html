@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#2a2a2a; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:'Noto Sans KR',sans-serif; }
+  .scene { width:480px; height:560px; position:relative; overflow:hidden; border:3px solid #333; border-radius:8px; background:#C8C4A0; }
+
+  /* 픽셀 렌더링 */
+  svg.pixel { image-rendering:pixelated; image-rendering:crisp-edges; }
+
+  /* 말풍선 */
+  .bubble {
+    position:absolute; background:#fff; border:3px solid #333; padding:7px 10px;
+    font-size:11px; color:#333; max-width:145px; line-height:1.5; text-align:left;
+    opacity:0; transform:scale(0.8) translateY(5px);
+    transition: opacity 0.3s, transform 0.3s;
+    z-index:20;
+  }
+  .bubble.show { opacity:1; transform:scale(1) translateY(0); }
+  .bubble::after {
+    content:''; position:absolute; bottom:-9px; width:14px; height:14px;
+    background:inherit; border-right:3px solid #333; border-bottom:3px solid #333;
+    transform:rotate(45deg);
+  }
+  .bubble.left::after { left:16px; }
+  .bubble.right::after { right:16px; }
+
+  /* 캐릭터 컨테이너 */
+  .char { position:absolute; text-align:center; z-index:10; cursor:pointer; }
+  .char:hover .char-body { transform:scale(1.08); }
+  .char-body { transition:transform 0.2s; }
+
+  /* === 애니메이션들 === */
+
+  /* 숨쉬기 (기본) */
+  @keyframes breathe {
+    0%,100% { transform:translateY(0); }
+    50% { transform:translateY(-2px); }
+  }
+
+  /* 신남 (사원 - 통통 뛰기) */
+  @keyframes bounce {
+    0%,100% { transform:translateY(0) rotate(0deg); }
+    25% { transform:translateY(-8px) rotate(-3deg); }
+    50% { transform:translateY(0) rotate(0deg); }
+    75% { transform:translateY(-5px) rotate(3deg); }
+  }
+
+  /* 고개 끄덕 (대리) */
+  @keyframes nod {
+    0%,100% { transform:translateY(0) rotate(0deg); }
+    30% { transform:translateY(2px) rotate(3deg); }
+    60% { transform:translateY(0) rotate(-1deg); }
+  }
+
+  /* 팔짱 끼고 생각 (과장) */
+  @keyframes think {
+    0%,100% { transform:translateY(0) rotate(0deg); }
+    50% { transform:translateY(-1px) rotate(-2deg); }
+  }
+
+  /* 위엄있게 (사장) */
+  @keyframes boss {
+    0%,100% { transform:translateY(0); }
+    50% { transform:translateY(-1px); }
+  }
+
+  /* 커피 김 */
+  @keyframes steam {
+    0% { transform:translateY(0) scaleX(1); opacity:0.7; }
+    50% { transform:translateY(-6px) scaleX(1.3); opacity:0.3; }
+    100% { transform:translateY(-12px) scaleX(0.8); opacity:0; }
+  }
+
+  /* 반짝이 (감탄) */
+  @keyframes sparkle {
+    0%,100% { opacity:0; transform:scale(0); }
+    50% { opacity:1; transform:scale(1); }
+  }
+
+  /* 물음표 */
+  @keyframes questionPop {
+    0%,100% { opacity:0; transform:translateY(0) scale(0); }
+    20% { opacity:1; transform:translateY(-4px) scale(1.2); }
+    40% { opacity:1; transform:translateY(-2px) scale(1); }
+    80% { opacity:1; transform:translateY(-2px) scale(1); }
+  }
+
+  /* 하트 */
+  @keyframes heartFloat {
+    0% { opacity:0; transform:translateY(0) scale(0); }
+    30% { opacity:1; transform:translateY(-5px) scale(1); }
+    100% { opacity:0; transform:translateY(-18px) scale(0.6); }
+  }
+
+  /* 말할 때 좌우 흔들 */
+  @keyframes talking {
+    0%,100% { transform:rotate(0deg); }
+    25% { transform:rotate(-4deg); }
+    75% { transform:rotate(4deg); }
+  }
+
+  /* 타이핑 점 */
+  @keyframes dotPulse {
+    0%,80%,100% { opacity:0.2; transform:scale(0.8); }
+    40% { opacity:1; transform:scale(1.2); }
+  }
+
+  /* 이름표 */
+  .name-tag {
+    font-size:10px; font-weight:bold; margin-top:3px; color:#333;
+  }
+
+  /* 타이핑 바 */
+  .typing-bar {
+    position:absolute; bottom:0; left:0; right:0; display:flex; align-items:center;
+    gap:8px; padding:10px 16px; background:rgba(255,255,255,0.92); border-top:3px solid #333;
+    z-index:30;
+  }
+  .typing-dots { display:flex; gap:3px; }
+  .typing-dots span {
+    width:6px; height:6px; background:#333; border-radius:50%;
+    animation:dotPulse 1.4s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay:0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay:0.4s; }
+</style>
+</head>
+<body>
+
+<div class="scene">
+  <!-- 벽 -->
+  <div style="position:absolute;top:0;left:0;right:0;height:42%;background:linear-gradient(180deg,#D6D2AE,#CECA9E);"></div>
+  <!-- 바닥 -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:58%;background:#D4C878;"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:58%;opacity:0.05;background:repeating-linear-gradient(45deg,transparent,transparent 28px,#000 28px,#000 29px),repeating-linear-gradient(-45deg,transparent,transparent 28px,#000 28px,#000 29px);"></div>
+  <div style="position:absolute;top:42%;left:0;right:0;height:3px;background:#A09C78;"></div>
+
+  <!-- 화이트보드 -->
+  <div style="position:absolute;top:35px;left:18px;width:95px;height:58px;background:#fff;border:3px solid #555;box-shadow:2px 3px 0 #999;">
+    <div style="padding:6px;">
+      <div style="width:55%;height:3px;background:#4285F4;margin:3px 0;"></div>
+      <div style="width:75%;height:3px;background:#10A37F;margin:3px 0;"></div>
+      <div style="width:35%;height:3px;background:#D97706;margin:3px 0;"></div>
+      <div style="width:60%;height:3px;background:#7C3AED;margin:3px 0;"></div>
+    </div>
+  </div>
+
+  <!-- 시계 -->
+  <div style="position:absolute;top:22px;right:45px;width:28px;height:28px;background:#fff;border:3px solid #555;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;box-shadow:1px 2px 0 #999;">🕑</div>
+
+  <!-- 화분 -->
+  <div style="position:absolute;top:88px;right:22px;font-size:24px;">🪴</div>
+
+  <!-- 회의 테이블 -->
+  <div style="position:absolute;bottom:148px;left:50%;transform:translateX(-50%);">
+    <div style="width:175px;height:62px;background:#7A5230;border:3px solid #4A3018;border-radius:6px;transform:perspective(200px) rotateX(10deg);box-shadow:0 6px 0 #4A3018;">
+      <div style="display:flex;justify-content:center;align-items:center;gap:14px;padding:10px;">
+        <div style="width:16px;height:11px;background:#ddd;border:2px solid #999;border-radius:1px;"></div>
+        <!-- 커피컵 + 김 -->
+        <div style="position:relative;">
+          <div style="width:12px;height:10px;background:#F5F0E0;border:2px solid #999;border-radius:0 0 2px 2px;"></div>
+          <div style="position:absolute;top:-3px;left:2px;width:2px;height:4px;background:rgba(255,255,255,0.6);border-radius:2px;animation:steam 1.5s infinite;"></div>
+          <div style="position:absolute;top:-4px;left:6px;width:2px;height:4px;background:rgba(255,255,255,0.5);border-radius:2px;animation:steam 1.5s infinite 0.5s;"></div>
+        </div>
+        <div style="width:16px;height:11px;background:#E8E4D0;border:2px solid #999;border-radius:1px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Gemini 사원 ====== -->
+  <div class="char" id="gemini" style="bottom:98px;left:32px;" onclick="emote('gemini')">
+    <!-- 말풍선 -->
+    <div class="bubble left" id="bubble-gemini" style="bottom:72px;left:-5px;"></div>
+    <!-- 이모션 이펙트 -->
+    <div id="emote-gemini" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:bounce 1.8s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <!-- 머리카락 -->
+        <rect x="3" y="0" width="6" height="1" fill="#444"/>
+        <rect x="2" y="1" width="8" height="1" fill="#444"/>
+        <rect x="2" y="0" width="2" height="1" fill="#444"/>
+        <!-- 얼굴 -->
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 눈 (반짝이는 큰 눈) -->
+        <rect x="3.5" y="3" width="2" height="2" fill="#333" rx="0.5"/>
+        <rect x="4" y="3" width="1" height="1" fill="#fff"/>
+        <rect x="6.5" y="3" width="2" height="2" fill="#333" rx="0.5"/>
+        <rect x="7" y="3" width="1" height="1" fill="#fff"/>
+        <!-- 볼터치 -->
+        <rect x="2.5" y="5" width="1.5" height="1" fill="#FFB0B0" rx="0.5"/>
+        <rect x="8" y="5" width="1.5" height="1" fill="#FFB0B0" rx="0.5"/>
+        <!-- 웃는 입 -->
+        <rect x="5" y="5.5" width="2" height="1" fill="#E07060" rx="0.5"/>
+        <!-- 몸통 -->
+        <rect x="2" y="7" width="8" height="4" fill="#4285F4" rx="1"/>
+        <rect x="1" y="8" width="1" height="2" fill="#4285F4"/>
+        <rect x="10" y="8" width="1" height="2" fill="#4285F4"/>
+        <!-- 손 (한쪽은 커피컵) -->
+        <rect x="0" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="9" width="1" height="1" fill="#FFD5B0"/>
+        <!-- 오른손 커피 -->
+        <rect x="11" y="8" width="2" height="2" fill="#C4956A" rx="0.3"/>
+        <rect x="11.3" y="7.5" width="0.5" height="1" fill="rgba(255,255,255,0.5)"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#2962FF"/>
+        <rect x="7" y="11" width="2" height="2" fill="#2962FF"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#1A47C2" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#1A47C2" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#4285F4;">Gemini</span> 사원</div>
+  </div>
+
+  <!-- ====== GPT 대리 ====== -->
+  <div class="char" id="gpt" style="bottom:92px;right:24px;" onclick="emote('gpt')">
+    <div class="bubble right" id="bubble-gpt" style="bottom:72px;right:-5px;"></div>
+    <div id="emote-gpt" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:nod 3s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <rect x="3" y="0" width="6" height="1" fill="#222"/>
+        <rect x="2" y="1" width="8" height="1" fill="#222"/>
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 안경 -->
+        <rect x="3" y="3" width="2.5" height="2" fill="none" stroke="#555" stroke-width="0.6" rx="0.3"/>
+        <rect x="6.5" y="3" width="2.5" height="2" fill="none" stroke="#555" stroke-width="0.6" rx="0.3"/>
+        <rect x="5.5" y="3.8" width="1" height="0.4" fill="#555"/>
+        <!-- 눈 -->
+        <rect x="3.8" y="3.5" width="1" height="1" fill="#333"/>
+        <rect x="7.2" y="3.5" width="1" height="1" fill="#333"/>
+        <!-- 입 -->
+        <rect x="5" y="5.5" width="2" height="0.6" fill="#333" rx="0.3"/>
+        <!-- 몸통 -->
+        <rect x="2" y="7" width="8" height="4" fill="#10A37F" rx="1"/>
+        <rect x="1" y="8" width="1" height="2" fill="#10A37F"/>
+        <rect x="10" y="8" width="1" height="2" fill="#10A37F"/>
+        <!-- 손 -->
+        <rect x="0" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="11" y="9" width="1" height="2" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <rect x="7" y="11" width="2" height="2" fill="#0D8A6A"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#086B52" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#086B52" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#10A37F;">GPT</span> 대리</div>
+  </div>
+
+  <!-- ====== Claude 과장 ====== -->
+  <div class="char" id="claude" style="bottom:214px;left:68px;" onclick="emote('claude')">
+    <div class="bubble left" id="bubble-claude" style="bottom:72px;left:-5px;"></div>
+    <div id="emote-claude" style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:think 4s infinite ease-in-out;">
+      <svg class="pixel" width="48" height="56" viewBox="0 0 12 14">
+        <rect x="3" y="0" width="6" height="1" fill="#4A3020"/>
+        <rect x="2" y="1" width="8" height="1" fill="#4A3020"/>
+        <rect x="2" y="2" width="8" height="5" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <rect x="10" y="3" width="1" height="3" fill="#FFD5B0"/>
+        <!-- 눈 (반쯤 감은 진지한) -->
+        <rect x="3.5" y="3.5" width="2" height="0.8" fill="#333"/>
+        <rect x="6.5" y="3.5" width="2" height="0.8" fill="#333"/>
+        <rect x="4" y="3.8" width="1" height="1" fill="#333"/>
+        <rect x="7" y="3.8" width="1" height="1" fill="#333"/>
+        <!-- 입 -->
+        <rect x="5" y="5.5" width="2" height="0.5" fill="#A07060"/>
+        <!-- 몸통 -->
+        <rect x="2" y="7" width="8" height="4" fill="#D97706" rx="1"/>
+        <!-- 팔짱 -->
+        <rect x="3" y="8" width="6" height="1.5" fill="#FFD5B0" rx="0.5"/>
+        <!-- 다리 -->
+        <rect x="3" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="7" y="11" width="2" height="2" fill="#B56505"/>
+        <rect x="2.5" y="13" width="3" height="1" fill="#8B4E04" rx="0.3"/>
+        <rect x="6.5" y="13" width="3" height="1" fill="#8B4E04" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#D97706;">Claude</span> 과장</div>
+  </div>
+
+  <!-- ====== Perplexity 사장 ====== -->
+  <div class="char" id="perplexity" style="bottom:218px;right:48px;" onclick="emote('perplexity')">
+    <div class="bubble right" id="bubble-perplexity" style="bottom:82px;right:-5px;"></div>
+    <div id="emote-perplexity" style="position:absolute;top:-25px;left:50%;transform:translateX(-50%);font-size:16px;z-index:25;"></div>
+    <div class="char-body" style="animation:boss 3s infinite ease-in-out;">
+      <svg class="pixel" width="56" height="64" viewBox="0 0 14 16">
+        <rect x="3" y="0" width="8" height="1" fill="#1a1a1a"/>
+        <rect x="2" y="1" width="10" height="1" fill="#1a1a1a"/>
+        <rect x="2" y="2" width="10" height="6" fill="#FFD5B0" rx="1"/>
+        <rect x="1" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <rect x="12" y="3" width="1" height="4" fill="#FFD5B0"/>
+        <!-- 날카로운 눈 -->
+        <rect x="4" y="3.5" width="2" height="0.7" fill="#222"/>
+        <rect x="8" y="3.5" width="2" height="0.7" fill="#222"/>
+        <rect x="4.5" y="4" width="1.5" height="1.5" fill="#333"/>
+        <rect x="5" y="4" width="0.5" height="0.5" fill="#fff"/>
+        <rect x="8.5" y="4" width="1.5" height="1.5" fill="#333"/>
+        <rect x="9" y="4" width="0.5" height="0.5" fill="#fff"/>
+        <!-- 입 -->
+        <rect x="6" y="6.5" width="2" height="0.6" fill="#333"/>
+        <!-- 넥타이 -->
+        <rect x="6.2" y="8.2" width="1.6" height="1" fill="#FFD700"/>
+        <rect x="6.5" y="9.2" width="1" height="2" fill="#FFD700"/>
+        <!-- 몸통 (정장) -->
+        <rect x="2" y="8" width="10" height="5" fill="#7C3AED" rx="1"/>
+        <rect x="1" y="9" width="1" height="3" fill="#7C3AED"/>
+        <rect x="12" y="9" width="1" height="3" fill="#7C3AED"/>
+        <!-- 손 -->
+        <rect x="0" y="10" width="1" height="2" fill="#FFD5B0"/>
+        <rect x="13" y="10" width="1" height="2" fill="#FFD5B0"/>
+        <!-- 다리 -->
+        <rect x="3" y="13" width="3" height="2" fill="#5B21B6"/>
+        <rect x="8" y="13" width="3" height="2" fill="#5B21B6"/>
+        <rect x="2.5" y="15" width="4" height="1" fill="#333" rx="0.3"/>
+        <rect x="7.5" y="15" width="4" height="1" fill="#333" rx="0.3"/>
+      </svg>
+    </div>
+    <div class="name-tag"><span style="color:#7C3AED;">Perplexity</span> 사장</div>
+  </div>
+
+  <!-- 타이핑 바 -->
+  <div class="typing-bar" id="typing-bar" style="display:none;">
+    <div id="typing-avatar" style="width:20px;height:20px;border:2px solid #333;border-radius:4px;"></div>
+    <span id="typing-name" style="font-size:12px;color:#333;font-weight:500;"></span>
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  </div>
+</div>
+
+<script>
+const CHARS = {
+  gemini: { name:'Gemini 사원', color:'#4285F4', emotes:['✨','🤩','💡','🎉'] },
+  gpt: { name:'GPT 대리', color:'#10A37F', emotes:['🤔','📋','💻','👍'] },
+  claude: { name:'Claude 과장', color:'#D97706', emotes:['🧐','📊','⚠️','💭'] },
+  perplexity: { name:'Perplexity 사장', color:'#7C3AED', emotes:['📈','💼','🔥','👊'] },
+};
+
+const MESSAGES = [
+  { who:'gemini', text:'와!! 오늘 리서치 봤어?? AI 코딩 도구 성장 속도가 미쳤어 ㄷㄷㄷ', emote:'🤩' },
+  { who:'gpt', text:'ㅋㅋ 흥분은 알겠는데, 실무에서 쓸 수 있는지가 중요하지. 파일럿부터 해보자.', emote:'🤔' },
+  { who:'claude', text:'팀 관점에서 보면 교육 비용도 같이 따져봐야 해. 러닝커브가 만만치 않거든.', emote:'🧐' },
+  { who:'gemini', text:'아 근데 진짜 써보면 바로 적응돼요! 제가 어제 해봤는데 코드 자동완성이 진짜...', emote:'✨' },
+  { who:'gpt', text:'자동완성이 좋은 건 맞는데, 보안 이슈는 확인했어? 내부 코드 유출 가능성도 있어.', emote:'📋' },
+  { who:'perplexity', text:'데이터를 보면 답은 명확해. 도입 기업 중 87%가 생산성 향상을 보고했어.', emote:'📈' },
+  { who:'claude', text:'그 수치는 알겠는데, 우리 팀 상황에 맞는지는 다른 문제야. 기술 스택도 고려해야지.', emote:'⚠️' },
+  { who:'perplexity', text:'좋아. 그러면 2주 파일럿 후 결정하지. GPT 대리가 리드해.', emote:'💼' },
+  { who:'gpt', text:'넵, 기준 잡고 보고서 올릴게요. 사원은 테스트 케이스 좀 만들어봐.', emote:'👍' },
+  { who:'gemini', text:'오 저요?! 좋아요!! 진짜 열심히 해볼게요!! 💪💪', emote:'🎉' },
+];
+
+let msgIdx = 0;
+let isAnimating = false;
+
+function showTyping(who) {
+  const bar = document.getElementById('typing-bar');
+  const avatar = document.getElementById('typing-avatar');
+  const name = document.getElementById('typing-name');
+  const info = CHARS[who];
+  avatar.style.background = info.color;
+  name.textContent = info.name + '이 입력 중';
+  bar.style.display = 'flex';
+}
+
+function hideTyping() {
+  document.getElementById('typing-bar').style.display = 'none';
+}
+
+function showBubble(who, text) {
+  // 다른 말풍선 숨기기
+  document.querySelectorAll('.bubble').forEach(b => b.classList.remove('show'));
+  const bubble = document.getElementById('bubble-' + who);
+  bubble.textContent = text;
+  // 꼬리 다시 추가 (textContent가 지움)
+  const tail = document.createElement('div');
+  tail.style.cssText = 'position:absolute;bottom:-9px;width:14px;height:14px;background:inherit;border-right:3px solid #333;border-bottom:3px solid #333;transform:rotate(45deg);';
+  if (bubble.classList.contains('left')) tail.style.left = '16px';
+  else tail.style.right = '16px';
+  bubble.appendChild(tail);
+  bubble.classList.add('show');
+}
+
+function showEmoteEffect(who, emoji) {
+  const el = document.getElementById('emote-' + who);
+  el.textContent = emoji;
+  el.style.animation = 'none';
+  el.offsetHeight; // reflow
+  el.style.animation = 'heartFloat 1.2s ease-out forwards';
+}
+
+function setCharAnimation(who, anim) {
+  const charEl = document.querySelector('#' + who + ' .char-body');
+  charEl.style.animation = anim;
+}
+
+function nextMessage() {
+  if (isAnimating || msgIdx >= MESSAGES.length) {
+    if (msgIdx >= MESSAGES.length) {
+      msgIdx = 0; // loop
+      setTimeout(nextMessage, 2000);
+    }
+    return;
+  }
+  isAnimating = true;
+  const msg = MESSAGES[msgIdx];
+
+  // 1. 타이핑 표시
+  showTyping(msg.who);
+
+  // 캐릭터 애니메이션 변경 (말하는 중)
+  setCharAnimation(msg.who, 'talking 0.4s infinite ease-in-out');
+
+  // 2. 1~2초 후 말풍선 표시
+  const typingTime = 800 + Math.random() * 1200;
+  setTimeout(() => {
+    hideTyping();
+    showBubble(msg.who, msg.text);
+    showEmoteEffect(msg.who, msg.emote);
+
+    // 말하는 애니메이션을 원래대로
+    setTimeout(() => {
+      const anims = { gemini:'bounce 1.8s infinite ease-in-out', gpt:'nod 3s infinite ease-in-out', claude:'think 4s infinite ease-in-out', perplexity:'boss 3s infinite ease-in-out' };
+      setCharAnimation(msg.who, anims[msg.who]);
+    }, 600);
+
+    msgIdx++;
+    isAnimating = false;
+
+    // 다음 메시지
+    setTimeout(nextMessage, 2500 + Math.random() * 1500);
+  }, typingTime);
+}
+
+// 클릭하면 이모트
+function emote(who) {
+  const info = CHARS[who];
+  const emoji = info.emotes[Math.floor(Math.random() * info.emotes.length)];
+  showEmoteEffect(who, emoji);
+}
+
+// 시작
+setTimeout(nextMessage, 1000);
+</script>
+
+</body>
+</html>
