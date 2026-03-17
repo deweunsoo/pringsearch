@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config: any) => ipcRenderer.invoke('save-config', config),
   runResearchNow: () => ipcRenderer.invoke('run-research-now'),
+  deleteResearch: (date: string, index: number) => ipcRenderer.invoke('delete-research', date, index),
   getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
   saveBookmark: (item: any) => ipcRenderer.invoke('save-bookmark', item),
   removeBookmark: (id: string) => ipcRenderer.invoke('remove-bookmark', id),

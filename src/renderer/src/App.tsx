@@ -7,7 +7,9 @@ import DateNav from './components/DateNav'
 import Settings from './components/Settings'
 import { useResearch } from './hooks/useResearch'
 import DiscussionChat from './components/DiscussionChat'
+import DiscussionPage from './components/DiscussionPage'
 import { CatIcon, CaterpillarIcon, DocListIcon } from './components/icons'
+import { Agentation } from 'agentation'
 
 function toMarkdown(research: any): string {
   let md = `# 리서치 결과 (${research.date})\n\n`
@@ -70,15 +72,21 @@ function toSlackHtml(research: any): { plain: string; html: string } {
 }
 
 export default function App() {
-  const { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear } = useResearch()
+  const { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear, deleteSession } = useResearch()
   const [showSettings, setShowSettings] = useState(false)
+  const [showChat, setShowChat] = useState(false)
   const [copied, setCopied] = useState(false)
   const [shared, setShared] = useState<string | false>(false)
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
   const [downloadPath, setDownloadPath] = useState<string | null>(null)
-  const [discussions, setDiscussions] = useState<Record<number, any[]>>({})
+  const [discussions, setDiscussions] = useState<Record<number, any[]>>(() => {
+    try {
+      const saved = localStorage.getItem(`discussions-${new Date().toISOString().slice(0, 10)}`)
+      return saved ? JSON.parse(saved) : {}
+    } catch { return {} }
+  })
   const [discussionLoading, setDiscussionLoading] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const settingsRef = useRef<HTMLDivElement>(null)
@@ -122,6 +130,12 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (Object.keys(discussions).length > 0) {
+      localStorage.setItem(`discussions-${currentDate}`, JSON.stringify(discussions))
+    }
+  }, [discussions, currentDate])
+
+  useEffect(() => {
     if (!showShareMenu) return
     const handleClick = (e: MouseEvent) => {
       if (shareRef.current && !shareRef.current.contains(e.target as Node)) {
@@ -141,6 +155,12 @@ export default function App() {
   }, [sessions.length])
 
   useEffect(() => {
+    if (!loading && activeTab >= sessions.length && sessions.length > 0) {
+      setActiveTab(sessions.length - 1)
+    }
+  }, [loading, sessions.length, activeTab])
+
+  useEffect(() => {
     if (contentRef.current) {
       contentRef.current.scrollTo({ top: 0 })
     }
@@ -148,22 +168,18 @@ export default function App() {
 
   const mergedSessions = useCallback(() => {
     if (sessions.length === 0) return null
-    const allTrends = sessions.flatMap(s => s.trends || [])
-    const allInsights = sessions.flatMap(s => s.insights || [])
-    const allActions = sessions.flatMap(s => s.actions || [])
-    const seenTrends = new Set<string>()
-    const seenInsights = new Set<string>()
-    const seenActions = new Set<string>()
+    const s = sessions[activeTab]
+    if (!s) return null
     return {
-      date: sessions[0].date,
-      trends: allTrends.filter(t => { const k = t.text; if (seenTrends.has(k)) return false; seenTrends.add(k); return true }),
-      insights: allInsights.filter(i => { const k = i.title; if (seenInsights.has(k)) return false; seenInsights.add(k); return true }),
-      actions: allActions.filter(a => { const k = a.text; if (seenActions.has(k)) return false; seenActions.add(k); return true }),
-      trendHeadline: sessions[sessions.length - 1].trendHeadline,
-      insightHeadline: sessions[sessions.length - 1].insightHeadline,
-      actionHeadline: sessions[sessions.length - 1].actionHeadline,
+      date: s.date,
+      trends: s.trends || [],
+      insights: s.insights || [],
+      actions: s.actions || [],
+      trendHeadline: s.trendHeadline,
+      insightHeadline: s.insightHeadline,
+      actionHeadline: s.actionHeadline,
     }
-  }, [sessions])
+  }, [sessions, activeTab])
 
   const handleCopy = () => {
     const merged = mergedSessions()
@@ -195,52 +211,121 @@ export default function App() {
             window.api.getConfig().then((c: any) => { if (c?.downloadPath) setDownloadPath(c.downloadPath) })
           }} onRunNow={runNow} />
         </div>
+      ) : showChat ? (
+        <DiscussionPage
+          discussions={discussions}
+          sessionTimes={sessions.map(s => s.generatedAt ? (() => { const d = new Date(s.generatedAt); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` })() : '')}
+          onBack={() => setShowChat(false)}
+          currentDate={currentDate}
+          activeSessionIdx={activeTab < sessions.length ? activeTab : Math.max(0, sessions.length - 1)}
+          discussionLoading={discussionLoading}
+          onStartDiscussion={async (idx: number) => {
+            if (!sessions[idx]) return
+            setDiscussionLoading(true)
+            try {
+              const session = sessions[idx]
+              const result = await window.api.runDiscussion({
+                trends: session.trends || [],
+                insights: session.insights || [],
+                actions: session.actions || [],
+              })
+              setDiscussions(prev => ({ ...prev, [idx]: [...(prev[idx] || []), ...result] }))
+            } catch (e) {
+              console.error('Discussion failed:', e)
+            } finally {
+              setDiscussionLoading(false)
+            }
+          }}
+        />
       ) : (
         <>
           <Header
             currentDate={currentDate}
             generatedAt={research?.generatedAt}
             onSettingsClick={() => setShowSettings(true)}
+            onChatClick={() => setShowChat(true)}
             onClear={clear}
             loading={loading}
             scrolled={scrolled}
+            chatCount={Object.values(discussions).filter(d => d.length > 0).length}
           />
 
           {(sessions.length > 1 || (loading && sessions.length > 0)) && (
-            <div style={{
+            <div className="hide-scrollbar" style={{
               display: 'flex',
               alignItems: 'center',
               gap: '2px',
-              padding: '6px 20px',
+              padding: '6px 20px 6px 4px',
               borderBottom: '1px solid #E5E7EB',
               overflowX: 'auto',
               flexShrink: 0,
             }}>
               {sessions.map((s, i) => {
                 const isActive = activeTab === i
-                const time = s.generatedAt ? (() => { const d = new Date(s.generatedAt); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` })() : ''
                 return (
-                  <button
+                  <div
                     key={i}
-                    onClick={() => setActiveTab(i)}
                     style={{
-                      padding: '5px 12px',
-                      fontSize: '13px',
-                      fontWeight: isActive ? 600 : 400,
-                      color: isActive ? '#333D4B' : '#8B95A1',
-                      background: isActive ? '#F2F4F6' : 'transparent',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      letterSpacing: '-0.2px',
-                      transition: 'background 0.15s',
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#F8F9FA' }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
                   >
-                    리서치 {i + 1}{time && <span style={{ fontSize: '11px', color: '#B0B8C1', marginLeft: '4px' }}>{time}</span>}
-                  </button>
+                    <button
+                      onClick={() => setActiveTab(i)}
+                      style={{
+                        padding: '5px 28px 5px 12px',
+                        fontSize: '13px',
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? '#333D4B' : '#8B95A1',
+                        background: isActive ? '#F2F4F6' : 'transparent',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '-0.2px',
+                        transition: 'background 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#E5E7EB' }}
+                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      리서치 {i + 1}
+                    </button>
+                    {sessions.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteSession(i)
+                          if (activeTab >= i && activeTab > 0) setActiveTab(activeTab - 1)
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '4px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '16px',
+                          height: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: '#D1D5DB',
+                          border: 'none',
+                          borderRadius: '50%',
+                          cursor: 'pointer',
+                          padding: 0,
+                          color: '#FFFFFF',
+                          fontSize: '14px',
+                          lineHeight: 1,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#9CA3AF' }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#D1D5DB' }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 )
               })}
               {loading && sessions.length > 0 && (
@@ -325,26 +410,6 @@ export default function App() {
                     <TrendSummary trends={sessions[activeTab].trends || []} headline={sessions[activeTab].trendHeadline} />
                     <InsightCards insights={sessions[activeTab].insights || []} headline={sessions[activeTab].insightHeadline} />
                     <ActionItems actions={sessions[activeTab].actions || []} headline={sessions[activeTab].actionHeadline} />
-                    <DiscussionChat
-                      messages={discussions[activeTab] || []}
-                      loading={discussionLoading}
-                      onStart={async () => {
-                        setDiscussionLoading(true)
-                        try {
-                          const session = sessions[activeTab]
-                          const result = await window.api.runDiscussion({
-                            trends: session.trends || [],
-                            insights: session.insights || [],
-                            actions: session.actions || [],
-                          })
-                          setDiscussions(prev => ({ ...prev, [activeTab]: result }))
-                        } catch (e) {
-                          console.error('Discussion failed:', e)
-                        } finally {
-                          setDiscussionLoading(false)
-                        }
-                      }}
-                    />
                   </>
                 ) : loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '48px 0' }}>
@@ -379,40 +444,43 @@ export default function App() {
                     </button>
                   </div>
                 ) : null}
-                {!loading && (<>
-                  <button
-                    onClick={() => {
-                      setActiveTab(sessions.length)
-                      addResearch()
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      background: 'transparent',
-                      border: '1px dashed #D1D6DB',
-                      borderRadius: '12px',
-                      padding: '14px',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#8B95A1',
-                      cursor: 'pointer',
-                      letterSpacing: '-0.2px',
-                      transition: 'background 0.15s'
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 3v10M3 8h10" stroke="#8B95A1" strokeWidth="1.8" strokeLinecap="round"/>
-                    </svg>
-                    리서치 더하기
-                  </button>
-                  <p style={{ fontSize: '15px', color: '#8B95A1', textAlign: 'center', margin: '6px 0 0', letterSpacing: '-0.2px' }}>
-                    다른 시각으로 한 번 더 읽어보세요
-                  </p>
-                </>)}
+                {!loading && (
+                  <div>
+                    <button
+                      onClick={() => {
+                        setActiveTab(sessions.length)
+                        addResearch()
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        width: '100%',
+                        background: 'transparent',
+                        border: '1px dashed #D1D6DB',
+                        borderRadius: '12px',
+                        padding: '14px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#8B95A1',
+                        cursor: 'pointer',
+                        letterSpacing: '-0.2px',
+                        transition: 'background 0.15s'
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 3v10M3 8h10" stroke="#8B95A1" strokeWidth="1.8" strokeLinecap="round"/>
+                      </svg>
+                      리서치 더하기
+                    </button>
+                    <p style={{ fontSize: '15px', color: '#8B95A1', textAlign: 'center', margin: '20px 0 0', letterSpacing: '-0.2px' }}>
+                      다른 시각으로 한 번 더 읽어보세요
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -555,14 +623,16 @@ export default function App() {
           </div>
 
           <DateNav currentDate={currentDate} onDateChange={(date) => {
-            if (sessions.length > 1) {
-              if (!window.confirm('추가 리서치 내용이 사라져요. 이동할까요?')) return
-            }
             setActiveTab(0)
+            try {
+              const saved = localStorage.getItem(`discussions-${date}`)
+              setDiscussions(saved ? JSON.parse(saved) : {})
+            } catch { setDiscussions({}) }
             loadResearch(date)
           }} />
         </>
       )}
+      {import.meta.env.DEV && <Agentation />}
     </div>
   )
 }

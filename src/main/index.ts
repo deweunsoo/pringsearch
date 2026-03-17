@@ -109,6 +109,7 @@ function setupIPC(): void {
     scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch)
   })
   ipcMain.handle('run-research-now', () => runResearch())
+  ipcMain.handle('delete-research', (_e, date: string, index: number) => storage.deleteResearchAt(date, index))
   ipcMain.handle('get-bookmarks', () => storage.loadBookmarks())
   ipcMain.handle('save-bookmark', (_e, item) => storage.saveBookmark(item))
   ipcMain.handle('remove-bookmark', (_e, id: string) => storage.removeBookmark(id))
@@ -171,7 +172,8 @@ function setupIPC(): void {
     return result.filePaths[0]
   })
   ipcMain.handle('run-discussion', async (_e, research) => {
-    const analyzer = new ClaudeAnalyzer()
+    const config = storage.loadConfig()
+    const analyzer = new ClaudeAnalyzer(config.anthropicApiKey)
     return analyzer.generateDiscussion(research)
   })
   ipcMain.handle('window-close', () => mainWindow?.hide())

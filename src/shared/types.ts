@@ -37,7 +37,7 @@ export interface ResearchResult {
 }
 
 export interface DiscussionMessage {
-  role: '사원' | '대리' | '과장' | '사장'
+  role: 'Gemini 사원' | 'GPT 대리' | 'Claude 과장' | 'Perplexity 사장'
   text: string
 }
 

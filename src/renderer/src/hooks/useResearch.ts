@@ -16,6 +16,7 @@ declare global {
       saveMarkdown: (filePath: string, content: string) => Promise<void>
       pickFolder: () => Promise<string | null>
       runDiscussion: (research: any) => Promise<any[]>
+      deleteResearch: (date: string, index: number) => Promise<void>
     }
   }
 }
@@ -63,7 +64,7 @@ export function useResearch() {
 
     const cleanup = window.api.onResearchComplete(result => {
       const elapsed = Date.now() - loadingStartRef.current
-      const minDelay = Math.max(0, 5000 - elapsed)
+      const minDelay = Math.max(0, 3000 - elapsed)
       setTimeout(() => {
         if (result) {
           if (isAddingRef.current) {
@@ -86,6 +87,11 @@ export function useResearch() {
     setLoading(false)
   }, [])
 
+  const deleteSession = useCallback(async (index: number) => {
+    await window.api.deleteResearch(currentDate, index)
+    setSessions(prev => prev.filter((_, i) => i !== index))
+  }, [currentDate])
+
   const clear = useCallback(() => {
     setSessions([])
     setLoading(false)
@@ -93,5 +99,5 @@ export function useResearch() {
 
   const research = sessions.length > 0 ? sessions[0] : null
 
-  return { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear }
+  return { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear, deleteSession }
 }

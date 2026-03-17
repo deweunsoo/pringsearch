@@ -42,15 +42,22 @@ export class ResearchOrchestrator {
       }
     }
 
+    // If no new articles, reuse existing articles for a fresh perspective
+    const articlesToAnalyze = uniqueArticles.length > 0
+      ? uniqueArticles
+      : existingResults?.flatMap(r => r.rawArticles || []) || []
+
     const existingTrends = existingResults?.flatMap(r => r.trends || []).map(t => t.text) || []
-    const analysis = await this.analyzer.analyze(uniqueArticles, config.keywords, existingTrends)
+    const existingInsights = existingResults?.flatMap(r => r.insights || []).map(i => `${i.title}: ${i.body}`) || []
+    const existingActions = existingResults?.flatMap(r => r.actions || []).map(a => a.text) || []
+    const analysis = await this.analyzer.analyze(articlesToAnalyze, config.keywords, existingTrends, existingInsights, existingActions)
 
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     return {
       date: today,
       generatedAt: new Date().toISOString(),
-      rawArticles: uniqueArticles,
+      rawArticles: articlesToAnalyze,
       ...analysis
     }
   }

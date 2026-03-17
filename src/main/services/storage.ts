@@ -55,6 +55,18 @@ export class StorageService {
     fs.writeFileSync(this.researchPath(result.date), JSON.stringify(existing, null, 2), 'utf-8')
   }
 
+  deleteResearchAt(date: string, index: number): void {
+    const existing = this.loadResearch(date) || []
+    if (index >= 0 && index < existing.length) {
+      existing.splice(index, 1)
+      if (existing.length === 0) {
+        try { fs.unlinkSync(this.researchPath(date)) } catch {}
+      } else {
+        fs.writeFileSync(this.researchPath(date), JSON.stringify(existing, null, 2), 'utf-8')
+      }
+    }
+  }
+
   private get bookmarksPath(): string {
     return path.join(this.basePath, 'bookmarks.json')
   }

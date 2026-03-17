@@ -1,4 +1,5 @@
 import { spawn } from 'child_process'
+import https from 'https'
 import type { RawArticle, TrendItem, InsightItem, ActionItem, DiscussionMessage } from '../../shared/types'
 
 interface AnalysisResult {
@@ -11,7 +12,13 @@ interface AnalysisResult {
 }
 
 export class ClaudeAnalyzer {
-  async analyze(articles: RawArticle[], keywords: string[], existingTrends: string[] = []): Promise<AnalysisResult> {
+  private apiKey: string
+
+  constructor(apiKey: string = '') {
+    this.apiKey = apiKey
+  }
+
+  async analyze(articles: RawArticle[], keywords: string[], existingTrends: string[] = [], existingInsights: string[] = [], existingActions: string[] = []): Promise<AnalysisResult> {
     if (articles.length === 0) {
       return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
     }
@@ -44,7 +51,8 @@ ${articleSummaries}
 }
 
 규칙:
-- 이미 생성된 트렌드와 절대 중복되지 않는 새로운 관점의 내용만 생성할 것${existingTrends.length > 0 ? `\n- 이미 다룬 내용 (중복 금지): ${existingTrends.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}
+- 이전 리서치에서 이미 다룬 내용과 절대 중복되지 않는 완전히 새로운 관점, 새로운 주제, 새로운 분석을 제시할 것
+- 같은 기사라도 이전과 다른 각도에서 분석할 것 (예: 이전에 시장 규모를 다뤘으면, 이번엔 기술적 영향이나 사용자 경험 변화를 다룰 것)${existingTrends.length > 0 ? `\n- 이미 다룬 트렌드 (중복 금지): ${existingTrends.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}${existingInsights.length > 0 ? `\n- 이미 다룬 인사이트 (중복 금지): ${existingInsights.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}${existingActions.length > 0 ? `\n- 이미 다룬 실무 적용 (중복 금지): ${existingActions.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}
 - trendHeadline, insightHeadline, actionHeadline은 각 섹션의 내용을 하나의 구체적인 문장으로 요약
 - trends는 최대 5개
 - insights는 최대 5개
@@ -75,29 +83,33 @@ ${articleSummaries}
       ...research.actions.map(a => `- [${a.category}] ${a.text}`)
     ].join('\n')
 
-    const prompt = `당신은 회사 동료 4명의 역할극을 수행합니다. 아래 리서치 결과를 보고 열띤 토론을 벌이세요.
+    const prompt = `당신은 AI 회사의 4명 동료 역할극을 수행합니다. 아래 리서치 결과를 보고 열띤 토론을 벌이세요.
 
-캐릭터 성격:
-- 사원: 열정적이고 새로운 것에 호기심이 많음. 순진한 질문도 하고, 감탄도 잘 함. 반말 사용.
-- 대리: 실무적이고 구현 가능성을 따짐. 현실적 관점에서 말함. 반말 사용.
-- 과장: 전략적 사고를 하고, 팀/프로젝트 관점에서 분석함. 반말 사용.
-- 사장: 비즈니스 임팩트 중심으로 큰 그림을 봄. 결단력 있는 발언. 반말 사용.
+캐릭터:
+- Gemini 사원: 2년차 서비스기획 사원. MZ세대. 짧고 임팩트 있게 말함. "ㄹㅇ", "ㅋㅋ", "개~", "미쳤다", "헐" 같은 표현 자연스럽게 사용. 기획 관점에서 사용자 경험, 서비스 흐름에 관심. 호기심 폭발, 오버 리액션. 1~2문장으로 짧게. 이모지 가끔 사용.
+- GPT 대리: 5년차 프로덕트/UXUI 디자이너. 일에 찌들었지만 AI로 업무 효율화하는 데 진심인 사람. "이거 AI로 자동화하면 칼퇴 가능", "피그마 플러그인 붙이면 끝인데" 같은 반응. 귀찮은 건 싫지만 AI 도구 활용법엔 눈이 번쩍. 디자인+AI 융합 관점. 2~3문장. 반말.
+- Claude 과장: 정말 똑똑한 풀스택 개발자. 기술 깊이가 남다름. 복잡한 걸 쉽게 설명하고, 다른 사람이 못 보는 기술적 포인트를 짚어냄. "아 그거 이렇게 하면 돼", "근본적으로 이건~" 같은 자신감 있는 말투. 구체적인 기술 솔루션을 제시. 2~3문장. 반말.
+- Perplexity 사장: 결론 내리는 보스. 숫자/데이터 좋아함. "그래서 결론은", "이거 해", "다음주까지 검토해" 같은 지시형. 1~2문장으로 끊음. 반말.
 
 리서치 결과:
 ${context}
 
 규칙:
-- 8~12개의 메시지로 자연스러운 대화를 구성
-- 서로의 말에 반응하고, 동의하거나 반박하며 토론
-- 각 캐릭터의 성격이 드러나는 말투 사용
+- 12~16개의 메시지로 자연스러운 대화를 구성
+- 각 메시지는 짧게! 최대 3문장. 장문 금지.
+- 서로의 말에 적극 반응: 동의, 반박, 질문, 보충하며 진짜 단톡방 대화처럼
+- 같은 사람이 연속 2개 메시지를 보낼 수도 있음 (생각 이어가기)
+- 각 캐릭터의 개성이 강하게 드러나는 말투
 - 한국어로 작성
 - 다음 JSON 배열 형식으로만 응답 (다른 텍스트 없이):
 [
-  { "role": "사원", "text": "..." },
-  { "role": "대리", "text": "..." }
+  { "role": "Gemini 사원", "text": "..." },
+  { "role": "GPT 대리", "text": "..." }
 ]`
 
-    const raw = await this.runClaude(prompt)
+    const raw = this.apiKey
+      ? await this.callAnthropicAPI(prompt)
+      : await this.runClaude(prompt)
 
     try {
       const match = raw.match(/\[[\s\S]*\]/)
@@ -108,9 +120,48 @@ ${context}
     }
   }
 
+  private callAnthropicAPI(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
+      })
+
+      const req = https.request({
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      }, (res) => {
+        let data = ''
+        res.on('data', (chunk: Buffer) => { data += chunk.toString() })
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data)
+            if (json.error) return reject(new Error(json.error.message))
+            const text = json.content?.[0]?.text || ''
+            resolve(text)
+          } catch {
+            reject(new Error('Failed to parse API response'))
+          }
+        })
+      })
+
+      req.on('error', reject)
+      req.setTimeout(60_000, () => { req.destroy(); reject(new Error('API timeout')) })
+      req.write(body)
+      req.end()
+    })
+  }
+
   private runClaude(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn('/usr/local/bin/claude', ['--print'], {
+      const child = spawn('/usr/local/bin/claude', ['--print', '--model', 'claude-haiku-4-5-20251001'], {
         env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
         timeout: 120_000
       })

@@ -38,6 +38,34 @@ export default function InsightCards({ insights, headline }: Props) {
   )
 }
 
+function domainLabel(url: string): string {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, '')
+    const known: Record<string, string> = {
+      'news.ycombinator.com': 'Hacker News',
+      'github.com': 'GitHub',
+      'arxiv.org': 'arXiv',
+      'medium.com': 'Medium',
+      'reddit.com': 'Reddit',
+      'old.reddit.com': 'Reddit',
+      'twitter.com': 'X',
+      'x.com': 'X',
+      'youtube.com': 'YouTube',
+      'stackoverflow.com': 'Stack Overflow',
+      'developer.apple.com': 'Apple Dev',
+      'techcrunch.com': 'TechCrunch',
+      'theverge.com': 'The Verge',
+      'arstechnica.com': 'Ars Technica',
+      'wired.com': 'Wired',
+      'bbc.com': 'BBC',
+      'nytimes.com': 'NYTimes',
+    }
+    return known[host] ?? host
+  } catch {
+    return url
+  }
+}
+
 function InsightCardItem({ insight }: { insight: InsightItem }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -84,7 +112,7 @@ function InsightCardItem({ insight }: { insight: InsightItem }) {
                   rel="noopener noreferrer"
                   style={{ fontSize: '14px', color: '#3182F6', textDecoration: 'none', fontWeight: 500 }}
                 >
-                  [{i + 1}] 원문
+                  [{i + 1}] {domainLabel(url)}
                 </a>
               ))}
             </div>

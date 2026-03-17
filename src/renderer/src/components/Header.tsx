@@ -1,12 +1,14 @@
-import { ChartIcon } from './icons'
+import { ChartIcon, ChatIcon } from './icons'
 
 interface HeaderProps {
   currentDate: string
   generatedAt?: string
   onSettingsClick: () => void
+  onChatClick: () => void
   onClear: () => void
   loading: boolean
   scrolled?: boolean
+  chatCount?: number
 }
 
 const SettingsIcon = () => (
@@ -15,7 +17,7 @@ const SettingsIcon = () => (
   </svg>
 )
 
-export default function Header({ onSettingsClick, onClear, loading, scrolled }: HeaderProps) {
+export default function Header({ onSettingsClick, onChatClick, onClear, loading, scrolled, chatCount }: HeaderProps) {
   return (
     <div style={{
       display: 'flex',
@@ -72,6 +74,25 @@ export default function Header({ onSettingsClick, onClear, loading, scrolled }: 
           data-tooltip="초기화"
         >
           <ChartIcon />
+        </button>
+        <button
+          className="header-icon-btn"
+          onClick={onChatClick}
+          style={{ color: 'var(--color-gray-8)', position: 'relative' }}
+          data-tooltip="토론"
+        >
+          <ChatIcon size={23} />
+          {chatCount !== undefined && chatCount > 0 && (
+            <span style={{
+              position: 'absolute',
+              top: '4px',
+              right: '2px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: '#3B82F6',
+            }} />
+          )}
         </button>
         <button
           className="header-icon-btn"
