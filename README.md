@@ -26,16 +26,16 @@
 
 ## 설치
 
-### Homebrew (권장)
+### 터미널에서 설치 (권장)
 
 ```bash
-brew tap deweunsoo/tap
-brew install --cask pringsearch
+curl -fsSL https://raw.githubusercontent.com/deweunsoo/pringsearch/main/install.sh | bash
 ```
 
-업데이트:
+### Homebrew
+
 ```bash
-brew upgrade --cask pringsearch
+brew tap deweunsoo/tap && brew install --cask pringsearch
 ```
 
 ### 직접 다운로드
