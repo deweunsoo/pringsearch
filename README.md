@@ -26,6 +26,20 @@
 
 ## 설치
 
+### Homebrew (권장)
+
+```bash
+brew tap deweunsoo/tap
+brew install --cask pringsearch
+```
+
+업데이트:
+```bash
+brew upgrade --cask pringsearch
+```
+
+### 직접 다운로드
+
 [최신 릴리즈](https://github.com/deweunsoo/pringsearch/releases/latest)에서 `.dmg` 파일을 다운로드하여 설치하세요.
 
 > macOS Gatekeeper 경고가 뜨면: 앱을 **우클릭** → **열기** → **열기** 클릭
