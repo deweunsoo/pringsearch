@@ -32,12 +32,6 @@
 curl -fsSL https://raw.githubusercontent.com/deweunsoo/pringsearch/main/install.sh | bash
 ```
 
-### Homebrew
-
-```bash
-brew tap deweunsoo/tap && brew install --cask pringsearch
-```
-
 ### 직접 다운로드
 
 [최신 릴리즈](https://github.com/deweunsoo/pringsearch/releases/latest)에서 `.dmg` 파일을 다운로드하여 설치하세요.
