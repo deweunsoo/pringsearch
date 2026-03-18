@@ -106,7 +106,7 @@ export default function DiscussionPage({ discussions, sessionTimes, onBack, onSt
   const nextBot = isTyping ? allMessages[visibleCount] : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F4F5F7' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* 헤더 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
