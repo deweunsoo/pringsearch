@@ -14,6 +14,8 @@ interface AppConfig {
   rssSources: RssSource[]
   keywords: string[]
   notificationEnabled: boolean
+  openAtLogin: boolean
+  setupCompleted: boolean
   dataPath: string
   fetchPeriodDays: number
   downloadPath?: string
@@ -30,9 +32,11 @@ export default function Settings({ onBack, onRunNow }: Props) {
   const [newRssName, setNewRssName] = useState('')
   const [newRssUrl, setNewRssUrl] = useState('')
   const [showToast, setShowToast] = useState(false)
+  const [aiProvider, setAiProvider] = useState<{ provider: string; path: string | null } | null>(null)
 
   useEffect(() => {
     window.api.getConfig().then(setConfig)
+    window.api.detectAi().then(setAiProvider)
   }, [])
 
   const save = async (updated: Partial<AppConfig>) => {
@@ -319,28 +323,70 @@ export default function Settings({ onBack, onRunNow }: Props) {
           />
         </SectionCard>
 
-        {/* Anthropic API 키 */}
+        {/* AI 엔진 */}
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>Anthropic API 키</span>
-            <Tooltip text="Claude AI로 기사를 분석하려면 API 키가 필요해요. anthropic.com에서 발급받을 수 있어요." />
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>AI 엔진</span>
+            <Tooltip text="기사 분석에 사용할 AI를 자동으로 감지해요. Claude Code나 Gemini CLI가 설치되어 있으면 자동으로 사용됩니다." />
           </div>
-          <input
-            value={config.anthropicApiKey || ''}
-            onChange={e => save({ anthropicApiKey: e.target.value })}
-            placeholder="sk-ant-..."
-            type="password"
-            style={inputStyle}
-          />
+          {aiProvider && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 14px',
+              background: aiProvider.provider !== 'none' ? '#EBF8EE' : '#FFF3E0',
+              borderRadius: '10px',
+              marginBottom: config.anthropicApiKey ? '0' : '10px'
+            }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: aiProvider.provider !== 'none' ? '#22C55E' : '#F59E0B',
+                flexShrink: 0
+              }} />
+              <span style={{ fontSize: '14px', color: '#333D4B', letterSpacing: '-0.2px' }}>
+                {aiProvider.provider === 'claude' && 'Claude CLI 자동 감지됨'}
+                {aiProvider.provider === 'gemini' && 'Gemini CLI 자동 감지됨'}
+                {aiProvider.provider === 'api-key' && 'API 키 사용 중'}
+                {aiProvider.provider === 'none' && 'AI CLI를 찾을 수 없어요'}
+              </span>
+            </div>
+          )}
+          {(!aiProvider || aiProvider.provider === 'none' || config.anthropicApiKey) && (
+            <div style={{ marginTop: '10px' }}>
+              <span style={{ fontSize: '12px', color: '#8B95A1', letterSpacing: '-0.1px' }}>
+                {aiProvider?.provider === 'none' ? 'API 키를 직접 입력해주세요' : 'API 키 (선택사항)'}
+              </span>
+              <input
+                value={config.anthropicApiKey || ''}
+                onChange={e => save({ anthropicApiKey: e.target.value })}
+                placeholder="sk-ant-..."
+                type="password"
+                style={{ ...inputStyle, marginTop: '6px' }}
+              />
+            </div>
+          )}
         </SectionCard>
 
-        {/* macOS 알림 */}
+        {/* macOS 알림 & 자동 시작 */}
         <SectionCard>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <span style={{ fontSize: '15px', fontWeight: 500, color: '#333D4B', letterSpacing: '-0.2px' }}>macOS 알림</span>
             <ToggleSwitch
               checked={config.notificationEnabled}
               onChange={v => save({ notificationEnabled: v })}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '15px', fontWeight: 500, color: '#333D4B', letterSpacing: '-0.2px' }}>로그인 시 자동 시작</span>
+              <p style={{ fontSize: '12px', color: '#8B95A1', margin: '4px 0 0', letterSpacing: '-0.2px' }}>잠자기 중에도 설정한 시간에 알림을 받을 수 있어요</p>
+            </div>
+            <ToggleSwitch
+              checked={config.openAtLogin ?? false}
+              onChange={v => save({ openAtLogin: v })}
             />
           </div>
         </SectionCard>

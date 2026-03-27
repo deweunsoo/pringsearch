@@ -5,6 +5,7 @@ import InsightCards from './components/InsightCard'
 import ActionItems from './components/ActionItems'
 import DateNav from './components/DateNav'
 import Settings from './components/Settings'
+import Onboarding from './components/Onboarding'
 import { useResearch } from './hooks/useResearch'
 import DiscussionChat from './components/DiscussionChat'
 import DiscussionPage from './components/DiscussionPage'
@@ -73,6 +74,7 @@ function toSlackHtml(research: any): { plain: string; html: string } {
 
 export default function App() {
   const { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear, deleteSession } = useResearch()
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null)
   const [showSettings, setShowSettings] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -93,6 +95,10 @@ export default function App() {
   const shareRef = useRef<HTMLDivElement>(null)
 
   const syncHeight = useCallback(() => {
+    if (showOnboarding) {
+      window.api.resizeWindow(560)
+      return
+    }
     if (showSettings && settingsRef.current) {
       const h = settingsRef.current.scrollHeight
       window.api.resizeWindow(h + 40)
@@ -102,16 +108,17 @@ export default function App() {
     } else if (!loading && !research) {
       window.api.resizeWindow(520)
     }
-  }, [research, sessions, loading, showSettings, activeTab])
+  }, [research, sessions, loading, showSettings, showOnboarding, activeTab])
 
   useEffect(() => {
     requestAnimationFrame(syncHeight)
-  }, [research, sessions, loading, showSettings, syncHeight])
+  }, [research, sessions, loading, showSettings, showOnboarding, syncHeight])
 
 
   useEffect(() => {
     window.api.getConfig().then((config: any) => {
       if (config?.downloadPath) setDownloadPath(config.downloadPath)
+      setShowOnboarding(!config?.setupCompleted)
     })
   }, [])
 
@@ -204,7 +211,9 @@ export default function App() {
         WebkitFontSmoothing: 'antialiased'
       }}
     >
-      {showSettings ? (
+      {showOnboarding ? (
+        <Onboarding onComplete={() => setShowOnboarding(false)} />
+      ) : showSettings ? (
         <div ref={settingsRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <Settings onBack={() => {
             setShowSettings(false)

@@ -295,8 +295,8 @@ export default function DiscussionPage({ discussions, sessionTimes, onBack, onSt
             {/* 토론 더하기 로딩 */}
             {discussionLoading && !isTyping && visibleCount > 0 && visibleCount >= allMessages.length && (
               <div style={{
-                display: 'flex', gap: '8px', alignItems: 'center',
-                marginTop: '16px', animation: 'msgSlideIn 0.3s ease-out',
+                display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'center',
+                width: '100%', marginTop: '16px', animation: 'msgSlideIn 0.3s ease-out',
               }}>
                 <div style={{
                   width: '28px', height: '28px',

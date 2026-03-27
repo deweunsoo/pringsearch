@@ -6,7 +6,7 @@ import path from 'path'
 import os from 'os'
 import { StorageService } from './services/storage'
 import { ResearchOrchestrator } from './services/orchestrator'
-import { ClaudeAnalyzer } from './services/analyzer'
+import { ClaudeAnalyzer, detectAiProvider } from './services/analyzer'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 import { autoUpdater } from 'electron-updater'
@@ -82,11 +82,15 @@ async function runResearch(): Promise<void> {
 
     mainWindow?.webContents.send('research-complete', hasContent ? result : null)
 
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] notificationEnabled=${config.notificationEnabled}, Notification.isSupported=${Notification.isSupported()}\n`)
     if (config.notificationEnabled) {
-      new Notification({
+      const n = new Notification({
         title: '오늘의 AI 리서치 도착',
         body: result.trendHeadline || '새로운 리서치가 준비되었습니다.'
-      }).show()
+      })
+      n.on('show', () => fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Notification shown\n`))
+      n.on('failed', (_, err) => fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Notification failed: ${err}\n`))
+      n.show()
     }
   } catch (error: any) {
     const fs = require('fs')
@@ -105,9 +109,16 @@ function setupIPC(): void {
   })
   ipcMain.handle('get-research-dates', () => storage.listResearchDates())
   ipcMain.handle('get-config', () => storage.loadConfig())
+  ipcMain.handle('detect-ai', () => {
+    const config = storage.loadConfig()
+    return detectAiProvider(config.anthropicApiKey || undefined)
+  })
   ipcMain.handle('save-config', (_e, config) => {
     storage.saveConfig(config)
-    scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch)
+    if (app.isPackaged) {
+      app.setLoginItemSettings({ openAtLogin: config.openAtLogin, openAsHidden: true })
+    }
+    scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   })
   ipcMain.handle('run-research-now', () => runResearch())
   ipcMain.handle('delete-research', (_e, date: string, index: number) => storage.deleteResearchAt(date, index))
@@ -194,7 +205,10 @@ app.whenReady().then(() => {
   setupIPC()
 
   const config = storage.loadConfig()
-  scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch)
+  if (app.isPackaged) {
+    app.setLoginItemSettings({ openAtLogin: config.openAtLogin, openAsHidden: true })
+  }
+  scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   trayManager.create(mainWindow!, runResearch)
 
   if (app.isPackaged) {

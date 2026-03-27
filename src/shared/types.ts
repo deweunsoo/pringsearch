@@ -62,6 +62,8 @@ export interface AppConfig {
   rssSources: RssSource[]
   keywords: string[]
   notificationEnabled: boolean
+  openAtLogin: boolean
+  setupCompleted: boolean
   dataPath: string
   fetchPeriodDays: number
 }
@@ -77,6 +79,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   ],
   keywords: ['AI Agent', 'AI Coding', 'LLM', 'Generative AI'],
   notificationEnabled: true,
+  openAtLogin: false,
+  setupCompleted: false,
   dataPath: '~/ai-research-widget/data',
   fetchPeriodDays: 7
 }

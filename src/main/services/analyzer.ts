@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn, execFileSync } from 'child_process'
 import https from 'https'
 import type { RawArticle, TrendItem, InsightItem, ActionItem, DiscussionMessage } from '../../shared/types'
 
@@ -9,6 +9,43 @@ interface AnalysisResult {
   trends: TrendItem[]
   insights: InsightItem[]
   actions: ActionItem[]
+}
+
+export type AiProvider = 'claude' | 'gemini' | 'api-key' | 'none'
+
+function whichSync(cmd: string): string | null {
+  try {
+    return execFileSync('which', [cmd], { encoding: 'utf-8', timeout: 5000 }).trim() || null
+  } catch {
+    return null
+  }
+}
+
+let cachedProvider: { provider: AiProvider; path: string | null } | null = null
+
+export function detectAiProvider(apiKey?: string): { provider: AiProvider; path: string | null } {
+  if (apiKey) return { provider: 'api-key', path: null }
+
+  if (cachedProvider && cachedProvider.provider !== 'api-key') return cachedProvider
+
+  const claudePath = whichSync('claude')
+  if (claudePath) {
+    cachedProvider = { provider: 'claude', path: claudePath }
+    return cachedProvider
+  }
+
+  const geminiPath = whichSync('gemini')
+  if (geminiPath) {
+    cachedProvider = { provider: 'gemini', path: geminiPath }
+    return cachedProvider
+  }
+
+  cachedProvider = { provider: 'none', path: null }
+  return cachedProvider
+}
+
+export function resetProviderCache(): void {
+  cachedProvider = null
 }
 
 export class ClaudeAnalyzer {
@@ -62,7 +99,7 @@ ${articleSummaries}
 - 중요한 숫자, 고유명사, 핵심 키워드는 **볼드**로 감싸기 (예: "**Cursor** 연매출 **20억 달러** 돌파")
 - trends의 keywords는 해당 트렌드의 핵심 키워드 1-3개 (예: ["AI 코딩", "Cursor", "바이브 코딩"])`
 
-    const text = await this.runClaude(prompt)
+    const text = await this.callAi(prompt)
 
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -107,9 +144,7 @@ ${context}
   { "role": "GPT 대리", "text": "..." }
 ]`
 
-    const raw = this.apiKey
-      ? await this.callAnthropicAPI(prompt)
-      : await this.runClaude(prompt)
+    const raw = await this.callAi(prompt)
 
     try {
       const match = raw.match(/\[[\s\S]*\]/)
@@ -117,6 +152,21 @@ ${context}
       return JSON.parse(match[0])
     } catch {
       return []
+    }
+  }
+
+  private async callAi(prompt: string): Promise<string> {
+    const { provider, path } = detectAiProvider(this.apiKey)
+
+    switch (provider) {
+      case 'api-key':
+        return this.callAnthropicAPI(prompt)
+      case 'claude':
+        return this.runCli(path!, ['--print', '--model', 'claude-haiku-4-5-20251001'], prompt)
+      case 'gemini':
+        return this.runCli(path!, [], prompt)
+      case 'none':
+        throw new Error('AI CLI를 찾을 수 없습니다. Claude Code 또는 Gemini CLI를 설치하거나, 설정에서 API 키를 입력해주세요.')
     }
   }
 
@@ -159,10 +209,10 @@ ${context}
     })
   }
 
-  private runClaude(prompt: string): Promise<string> {
+  private runCli(cliPath: string, args: string[], prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn('/usr/local/bin/claude', ['--print', '--model', 'claude-haiku-4-5-20251001'], {
-        env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin' },
+      const child = spawn(cliPath, args, {
+        env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin:/opt/homebrew/bin' },
         timeout: 120_000
       })
 
@@ -171,7 +221,7 @@ ${context}
       child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
       child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
       child.on('close', (code) => {
-        if (code !== 0) return reject(new Error(`claude exited ${code}: ${stderr}`))
+        if (code !== 0) return reject(new Error(`CLI exited ${code}: ${stderr}`))
         resolve(stdout)
       })
       child.on('error', reject)
