@@ -216,13 +216,13 @@ export default function Onboarding({ onComplete }: Props) {
       {/* Step 0: 환영 */}
       {step === 0 && (
         <div style={{ textAlign: 'center', animation: 'fadeIn 0.4s ease' }}>
-          <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
+          <div className="cat-bounce" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'center' }}>
             <CatIcon size={80} />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#333D4B', marginBottom: '8px', letterSpacing: '-0.3px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#333D4B', marginBottom: '8px', letterSpacing: '0px' }}>
             Pringsearch에 오신 걸 환영해요
           </h1>
-          <p style={{ fontSize: '18px', color: '#4b5563', lineHeight: 1.6, letterSpacing: '-0.2px', margin: 0, textAlign: 'center' }}>
+          <p style={{ fontSize: '18px', color: '#4b5563', lineHeight: 1.4, letterSpacing: '0px', margin: 0, textAlign: 'center' }}>
             매일 트렌드를 요약해서<br />설정한 시간에 알려드려요
           </p>
           <button
@@ -274,7 +274,7 @@ export default function Onboarding({ onComplete }: Props) {
                   style={{
                     padding: '10px 12px',
                     background: selected ? '#EBF3FE' : '#fff',
-                    border: selected ? '2px solid #3182F6' : '1px solid #E5E7EB',
+                    border: selected ? '2px solid #3182F6' : '2px solid #E5E7EB',
                     borderRadius: '12px',
                     cursor: 'pointer',
                     display: 'flex',

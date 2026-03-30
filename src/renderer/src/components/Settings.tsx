@@ -155,7 +155,7 @@ export default function Settings({ onBack, onRunNow }: Props) {
             <Tooltip text="선택한 기간 내에 올라온 글만 모아서 분석해요. 기간이 길수록 더 많은 글을 한번에 확인할 수 있어요." />
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            {[3, 7, 14, 30].map(d => (
+            {[1, 3, 7, 14, 30].map(d => (
               <button
                 key={d}
                 onClick={() => save({ fetchPeriodDays: d })}

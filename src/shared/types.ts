@@ -82,5 +82,5 @@ export const DEFAULT_CONFIG: AppConfig = {
   openAtLogin: false,
   setupCompleted: false,
   dataPath: '~/ai-research-widget/data',
-  fetchPeriodDays: 7
+  fetchPeriodDays: 3
 }

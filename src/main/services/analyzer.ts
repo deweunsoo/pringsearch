@@ -1,4 +1,5 @@
 import { spawn, execFileSync } from 'child_process'
+import fs from 'fs'
 import https from 'https'
 import type { RawArticle, TrendItem, InsightItem, ActionItem, DiscussionMessage } from '../../shared/types'
 
@@ -14,8 +15,25 @@ interface AnalysisResult {
 export type AiProvider = 'claude' | 'gemini' | 'api-key' | 'none'
 
 function whichSync(cmd: string): string | null {
+  const searchPaths = [
+    `/usr/local/bin/${cmd}`,
+    `/opt/homebrew/bin/${cmd}`,
+    `${process.env.HOME}/.local/bin/${cmd}`,
+    `${process.env.HOME}/.npm-global/bin/${cmd}`,
+  ]
+  for (const p of searchPaths) {
+    try {
+      fs.accessSync(p, fs.constants.X_OK)
+      return p
+    } catch {}
+  }
+  // fallback to which with extended PATH
   try {
-    return execFileSync('which', [cmd], { encoding: 'utf-8', timeout: 5000 }).trim() || null
+    return execFileSync('which', [cmd], {
+      encoding: 'utf-8',
+      timeout: 5000,
+      env: { ...process.env, PATH: `${process.env.PATH}:/usr/local/bin:/opt/homebrew/bin` }
+    }).trim() || null
   } catch {
     return null
   }
