@@ -212,7 +212,26 @@ app.whenReady().then(() => {
   trayManager.create(mainWindow!, runResearch)
 
   if (app.isPackaged) {
-    autoUpdater.checkForUpdatesAndNotify()
+    autoUpdater.autoDownload = true
+    autoUpdater.on('update-downloaded', (info) => {
+      const { version } = info
+      dialog.showMessageBox(mainWindow!, {
+        type: 'info',
+        title: '업데이트 준비 완료',
+        message: `새 버전(v${version})이 준비됐어요!`,
+        detail: '지금 재시작하면 업데이트가 적용돼요.',
+        buttons: ['지금 재시작', '나중에'],
+        defaultId: 0,
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall()
+        }
+      })
+    })
+    autoUpdater.on('error', (err) => {
+      fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update error: ${err?.message || err}\n`)
+    })
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {})
   }
 })
 
