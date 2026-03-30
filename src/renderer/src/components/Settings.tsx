@@ -327,7 +327,7 @@ export default function Settings({ onBack, onRunNow }: Props) {
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>AI 엔진</span>
-            <Tooltip text="기사 분석에 사용할 AI를 자동으로 감지해요. Claude Code나 Gemini CLI가 설치되어 있으면 자동으로 사용됩니다." />
+            <Tooltip text="Claude Code나 Gemini가 깔려 있으면 자동으로 연결돼요. 없으면 Claude 또는 GPT API 키를 직접 입력하면 돼요." />
           </div>
           {aiProvider && (
             <div style={{
@@ -347,22 +347,22 @@ export default function Settings({ onBack, onRunNow }: Props) {
                 flexShrink: 0
               }} />
               <span style={{ fontSize: '14px', color: '#333D4B', letterSpacing: '-0.2px' }}>
-                {aiProvider.provider === 'claude' && 'Claude CLI 자동 감지됨'}
-                {aiProvider.provider === 'gemini' && 'Gemini CLI 자동 감지됨'}
+                {aiProvider.provider === 'claude' && 'Claude 자동 연결됨'}
+                {aiProvider.provider === 'gemini' && 'Gemini 자동 연결됨'}
                 {aiProvider.provider === 'api-key' && 'API 키 사용 중'}
-                {aiProvider.provider === 'none' && 'AI CLI를 찾을 수 없어요'}
+                {aiProvider.provider === 'none' && 'AI를 찾을 수 없어요'}
               </span>
             </div>
           )}
           {(!aiProvider || aiProvider.provider === 'none' || config.anthropicApiKey) && (
             <div style={{ marginTop: '10px' }}>
               <span style={{ fontSize: '12px', color: '#8B95A1', letterSpacing: '-0.1px' }}>
-                {aiProvider?.provider === 'none' ? 'API 키를 직접 입력해주세요' : 'API 키 (선택사항)'}
+                {aiProvider?.provider === 'none' ? 'Claude 또는 GPT API 키를 입력해주세요' : 'API 키 (선택사항)'}
               </span>
               <input
                 value={config.anthropicApiKey || ''}
                 onChange={e => save({ anthropicApiKey: e.target.value })}
-                placeholder="sk-ant-..."
+                placeholder="sk-ant-... 또는 sk-..."
                 type="password"
                 style={{ ...inputStyle, marginTop: '6px' }}
               />
@@ -484,10 +484,10 @@ function Tooltip({ text }: { text: string }) {
           transform: 'translate(-50%, -100%)',
           background: '#333D4B',
           color: '#fff',
-          fontSize: '12px',
-          fontWeight: 400,
+          fontSize: '14px',
+          fontWeight: 500,
           lineHeight: 1.5,
-          padding: '8px 12px',
+          padding: '10px 14px',
           borderRadius: '8px',
           width: '200px',
           whiteSpace: 'normal',

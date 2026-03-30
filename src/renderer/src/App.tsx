@@ -96,7 +96,7 @@ export default function App() {
 
   const syncHeight = useCallback(() => {
     if (showOnboarding) {
-      window.api.resizeWindow(560)
+      window.api.resizeWindow(520)
       return
     }
     if (showSettings && settingsRef.current) {

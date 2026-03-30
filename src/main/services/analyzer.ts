@@ -160,17 +160,19 @@ ${context}
 
     switch (provider) {
       case 'api-key':
-        return this.callAnthropicAPI(prompt)
+        return this.apiKey.startsWith('sk-ant-')
+          ? this.callClaudeAPI(prompt)
+          : this.callGptAPI(prompt)
       case 'claude':
         return this.runCli(path!, ['--print', '--model', 'claude-haiku-4-5-20251001'], prompt)
       case 'gemini':
         return this.runCli(path!, [], prompt)
       case 'none':
-        throw new Error('AI CLI를 찾을 수 없습니다. Claude Code 또는 Gemini CLI를 설치하거나, 설정에서 API 키를 입력해주세요.')
+        throw new Error('AI를 찾을 수 없습니다. Claude Code 또는 Gemini를 설치하거나, 설정에서 API 키를 입력해주세요.')
     }
   }
 
-  private callAnthropicAPI(prompt: string): Promise<string> {
+  private callClaudeAPI(prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const body = JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
@@ -204,6 +206,43 @@ ${context}
 
       req.on('error', reject)
       req.setTimeout(60_000, () => { req.destroy(); reject(new Error('API timeout')) })
+      req.write(body)
+      req.end()
+    })
+  }
+
+  private callGptAPI(prompt: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+      })
+
+      const req = https.request({
+        hostname: 'api.openai.com',
+        path: '/v1/chat/completions',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+        },
+      }, (res) => {
+        let data = ''
+        res.on('data', (chunk: Buffer) => { data += chunk.toString() })
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(data)
+            if (json.error) return reject(new Error(json.error.message))
+            const text = json.choices?.[0]?.message?.content || ''
+            resolve(text)
+          } catch {
+            reject(new Error('Failed to parse GPT API response'))
+          }
+        })
+      })
+
+      req.on('error', reject)
+      req.setTimeout(60_000, () => { req.destroy(); reject(new Error('GPT API timeout')) })
       req.write(body)
       req.end()
     })

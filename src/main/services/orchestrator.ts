@@ -9,10 +9,10 @@ export class ResearchOrchestrator {
   private hnCollector: HackerNewsCollector
   private analyzer: ClaudeAnalyzer
 
-  constructor() {
+  constructor(apiKey?: string) {
     this.rssCollector = new RssCollector()
     this.hnCollector = new HackerNewsCollector()
-    this.analyzer = new ClaudeAnalyzer()
+    this.analyzer = new ClaudeAnalyzer(apiKey || '')
   }
 
   async run(config: AppConfig, existingResults?: ResearchResult[]): Promise<ResearchResult> {
