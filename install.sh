@@ -4,7 +4,7 @@ set -e
 echo "Pringsearch 설치 중..."
 
 # 최신 릴리즈 URL 가져오기
-URL=$(curl -s https://api.github.com/repos/deweunsoo/pringsearch/releases/latest | grep "browser_download_url.*arm64-mac.zip" | cut -d '"' -f 4)
+URL=$(curl -s https://api.github.com/repos/deweunsoo/pringsearch/releases/latest | grep 'browser_download_url.*arm64-mac\.zip"' | cut -d '"' -f 4)
 
 if [ -z "$URL" ]; then
   echo "다운로드 URL을 찾을 수 없습니다."
