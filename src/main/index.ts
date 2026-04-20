@@ -11,6 +11,12 @@ import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 import { autoUpdater } from 'electron-updater'
 
+// Prevent macOS Media Library TCC prompt ("access Apple Music / media library").
+// Chromium's SystemMediaControls loads MediaRemote.framework even when the app has
+// no media content, which triggers the permission dialog. Safe to disable here —
+// Pringsearch has no audio/video playback.
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService,GlobalMediaControls')
+
 app.name = app.isPackaged ? 'Pringsearch' : 'Pringsearch DEV'
 
 const DATA_PATH = path.join(os.homedir(), 'ai-research-widget')
