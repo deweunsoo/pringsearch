@@ -25,6 +25,7 @@ const scheduler = new Scheduler()
 const trayManager = new TrayManager()
 
 let mainWindow: BrowserWindow | null = null
+let researchRunning = false
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -69,6 +70,8 @@ function createWindow(): void {
 }
 
 async function runResearch(): Promise<void> {
+  if (researchRunning) return
+  researchRunning = true
   const config = storage.loadConfig()
 
   try {
@@ -79,8 +82,9 @@ async function runResearch(): Promise<void> {
     const existingResults = storage.loadResearch(today) || []
     const orchestrator = new ResearchOrchestrator(config.anthropicApiKey)
     const result = await orchestrator.run(config, existingResults)
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Result: ${JSON.stringify(result).slice(0, 300)}\n`)
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Result trends=${result.trends?.length || 0} insights=${result.insights?.length || 0} actions=${result.actions?.length || 0} articles=${result.rawArticles?.length || 0}\n`)
     const hasContent = result.trends.length > 0 || result.insights.length > 0
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] hasContent=${hasContent}, trends=${result.trends.length}, insights=${result.insights.length}\n`)
 
     if (hasContent) {
       storage.saveResearch(result)
@@ -103,6 +107,8 @@ async function runResearch(): Promise<void> {
     fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] FAILED: ${error?.message || error}\n`)
     console.error('[Research] Failed:', error?.message || error)
     mainWindow?.webContents.send('research-complete', null)
+  } finally {
+    researchRunning = false
   }
 }
 
@@ -218,26 +224,26 @@ app.whenReady().then(() => {
   trayManager.create(mainWindow!, runResearch)
 
   if (app.isPackaged) {
-    autoUpdater.autoDownload = true
-    autoUpdater.on('update-downloaded', (info) => {
+    autoUpdater.autoDownload = false
+    autoUpdater.on('update-available', (info) => {
       const { version } = info
       dialog.showMessageBox(mainWindow!, {
         type: 'info',
-        title: '업데이트 준비 완료',
-        message: `새 버전(v${version})이 준비됐어요!`,
-        detail: '지금 재시작하면 업데이트가 적용돼요.',
-        buttons: ['지금 재시작', '나중에'],
+        title: '업데이트 알림',
+        message: `새 버전(v${version})이 있어요!`,
+        detail: '다운로드 페이지에서 최신 버전을 받을 수 있어요.',
+        buttons: ['업데이트', '나중에'],
         defaultId: 0,
       }).then(({ response }) => {
         if (response === 0) {
-          autoUpdater.quitAndInstall()
+          shell.openExternal('https://github.com/deweunsoo/pringsearch/releases/latest')
         }
       })
     })
     autoUpdater.on('error', (err) => {
       fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update error: ${err?.message || err}\n`)
     })
-    autoUpdater.checkForUpdatesAndNotify().catch(() => {})
+    autoUpdater.checkForUpdates().catch(() => {})
   }
 })
 
