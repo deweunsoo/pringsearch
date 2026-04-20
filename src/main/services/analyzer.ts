@@ -84,6 +84,8 @@ export class ClaudeAnalyzer {
 
     const prompt = `You are an AI/UX research analyst. Analyze these articles and provide insights.
 
+중요: 아래 제공된 텍스트 정보만으로 분석하세요. URL에 접근하거나 웹에서 추가 정보를 가져오지 마세요. 제목과 요약만으로 충분합니다.
+
 관심 키워드: ${keywords.join(', ')}
 
 오늘 수집된 기사들:
@@ -118,12 +120,17 @@ ${articleSummaries}
 - trends의 keywords는 해당 트렌드의 핵심 키워드 1-3개 (예: ["AI 코딩", "Cursor", "바이브 코딩"])`
 
     const text = await this.callAi(prompt)
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] AI response (${text.length} chars): ${text.slice(0, 500)}\n`)
 
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
+      if (!jsonMatch) {
+        fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] No JSON match found\n`)
+        return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
+      }
       return JSON.parse(jsonMatch[0])
-    } catch {
+    } catch (e: any) {
+      fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] JSON parse error: ${e?.message}\n`)
       return { trendHeadline: '', insightHeadline: '', actionHeadline: '', trends: [], insights: [], actions: [] }
     }
   }
@@ -268,22 +275,31 @@ ${context}
 
   private runCli(cliPath: string, args: string[], prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const child = spawn(cliPath, args, {
-        env: { ...process.env, PATH: process.env.PATH + ':/usr/local/bin:/opt/homebrew/bin' },
+      const os = require('os')
+      const path = require('path')
+
+      // 프롬프트를 임시 파일로 저장하고 cat으로 파이프
+      const tmpFile = path.join(os.tmpdir(), `pringsearch-prompt-${Date.now()}.txt`)
+      fs.writeFileSync(tmpFile, prompt, 'utf-8')
+
+      const shell = spawn('sh', ['-c', `cat "${tmpFile}" | "${cliPath}" ${args.map(a => `"${a}"`).join(' ')}`], {
+        env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}`, HOME: os.homedir() },
         timeout: 120_000
       })
 
       let stdout = ''
       let stderr = ''
-      child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
-      child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
-      child.on('close', (code) => {
+      shell.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+      shell.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+      shell.on('close', (code) => {
+        try { fs.unlinkSync(tmpFile) } catch {}
         if (code !== 0) return reject(new Error(`CLI exited ${code}: ${stderr}`))
         resolve(stdout)
       })
-      child.on('error', reject)
-      child.stdin.write(prompt)
-      child.stdin.end()
+      shell.on('error', (err) => {
+        try { fs.unlinkSync(tmpFile) } catch {}
+        reject(err)
+      })
     })
   }
 }
