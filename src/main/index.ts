@@ -11,7 +11,6 @@ import { TopIssuePicker } from './services/top-issue-picker'
 import { ClaudeAnalyzer, detectAiProvider } from './services/analyzer'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
-import { autoUpdater } from 'electron-updater'
 import type { ResearchResult } from '../shared/types'
 
 // Prevent macOS Media Library TCC prompt ("access Apple Music / media library").
@@ -232,29 +231,40 @@ app.whenReady().then(() => {
   scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   trayManager.create(mainWindow!, runResearch)
 
-  if (app.isPackaged) {
-    autoUpdater.autoDownload = false
-    autoUpdater.on('update-available', (info) => {
-      const { version } = info
-      dialog.showMessageBox(mainWindow!, {
-        type: 'info',
-        title: '업데이트 알림',
-        message: `새 버전(v${version})이 있어요!`,
-        detail: '다운로드 페이지에서 최신 버전을 받을 수 있어요.',
-        buttons: ['업데이트', '나중에'],
-        defaultId: 0,
-      }).then(({ response }) => {
-        if (response === 0) {
-          shell.openExternal('https://github.com/deweunsoo/pringsearch/releases/latest')
-        }
-      })
-    })
-    autoUpdater.on('error', (err) => {
-      fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update error: ${err?.message || err}\n`)
-    })
-    autoUpdater.checkForUpdates().catch(() => {})
-  }
+  if (app.isPackaged) checkForUpdate()
 })
+
+function isNewerVersion(latest: string, current: string): boolean {
+  const pa = latest.split('.').map(Number)
+  const pb = current.split('.').map(Number)
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const na = pa[i] || 0, nb = pb[i] || 0
+    if (na > nb) return true
+    if (na < nb) return false
+  }
+  return false
+}
+
+async function checkForUpdate(): Promise<void> {
+  try {
+    const res = await net.fetch('https://api.github.com/repos/deweunsoo/pringsearch/releases/latest')
+    if (!res.ok) return
+    const data: any = await res.json()
+    const latest = String(data.tag_name || '').replace(/^v/, '')
+    if (!latest || !isNewerVersion(latest, app.getVersion())) return
+    const { response } = await dialog.showMessageBox(mainWindow!, {
+      type: 'info',
+      title: '업데이트 알림',
+      message: `새 버전(v${latest})이 있어요!`,
+      detail: '다운로드 페이지에서 최신 버전을 받을 수 있어요.',
+      buttons: ['업데이트', '나중에'],
+      defaultId: 0,
+    })
+    if (response === 0) shell.openExternal(data.html_url || 'https://github.com/deweunsoo/pringsearch/releases/latest')
+  } catch (err: any) {
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update check error: ${err?.message || err}\n`)
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
