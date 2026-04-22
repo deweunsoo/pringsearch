@@ -416,7 +416,7 @@ export default function App() {
             const el = e.target as HTMLDivElement
             setScrolled(el.scrollTop > 0)
           }} style={{ flex: 1, overflowY: 'auto', minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-            {loading && sessions.length === 0 && (
+            {categorySessions.length === 0 && loading && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '4px' }}>
                 <div style={{ position: 'relative', marginBottom: '24px' }}>
                   <div style={{ opacity: 0.35 }}>
@@ -431,7 +431,7 @@ export default function App() {
               </div>
             )}
 
-            {!loading && categorySessions.length === 0 && (
+            {categorySessions.length === 0 && !loading && (
               currentDate === new Date().toISOString().slice(0, 10) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px' }}>
                   <div className="cat-bounce"><CatIcon size={70} /></div>
