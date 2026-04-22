@@ -313,7 +313,7 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '2px',
-              padding: '6px 20px 6px 4px',
+              padding: '6px 20px 6px 0',
               borderBottom: '1px solid #E5E7EB',
               overflowX: 'auto',
               flexShrink: 0,
