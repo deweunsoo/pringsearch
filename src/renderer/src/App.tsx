@@ -89,11 +89,22 @@ export default function App() {
   useEffect(() => {
     if (activeCategory) localStorage.setItem('activeCategory', activeCategory)
   }, [activeCategory])
+  const [configCategoryNames, setConfigCategoryNames] = useState<string[]>([])
+  useEffect(() => {
+    window.api.getConfig().then((c: any) => {
+      setConfigCategoryNames((c?.categories || []).map((x: any) => x.name))
+    })
+  }, [])
   const categoryNames = useMemo(() => {
-    const set = new Set<string>()
-    for (const s of sessions) set.add(s.category || 'Legacy')
-    return Array.from(set)
-  }, [sessions])
+    const ordered: string[] = []
+    for (const n of configCategoryNames) if (!ordered.includes(n)) ordered.push(n)
+    for (const s of sessions) {
+      const n = s.category
+      if (!n || n === 'Legacy') continue
+      if (!ordered.includes(n)) ordered.push(n)
+    }
+    return ordered
+  }, [sessions, configCategoryNames])
   useEffect(() => {
     if (categoryNames.length === 0) return
     if (!categoryNames.includes(activeCategory)) setActiveCategory(categoryNames[0])
@@ -238,12 +249,17 @@ export default function App() {
       }}
     >
       {showOnboarding ? (
-        <Onboarding onComplete={() => setShowOnboarding(false)} />
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#F2F4F6', margin: '-6px -16px -16px', padding: '6px 16px 16px', borderRadius: '20px' }}>
+          <Onboarding onComplete={() => setShowOnboarding(false)} />
+        </div>
       ) : showSettings ? (
-        <div ref={settingsRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <div ref={settingsRef} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', background: '#F2F4F6', margin: '-6px -16px -16px', padding: '6px 16px 16px', borderRadius: '20px' }}>
           <Settings onBack={() => {
             setShowSettings(false)
-            window.api.getConfig().then((c: any) => { if (c?.downloadPath) setDownloadPath(c.downloadPath) })
+            window.api.getConfig().then((c: any) => {
+              if (c?.downloadPath) setDownloadPath(c.downloadPath)
+              setConfigCategoryNames((c?.categories || []).map((x: any) => x.name))
+            })
           }} onRunNow={runNow} />
         </div>
       ) : showChat ? (
@@ -289,6 +305,7 @@ export default function App() {
             categories={categoryNames}
             active={activeCategory}
             onChange={name => { setActiveCategory(name); setActiveTab(0) }}
+            showBorder={!(categorySessions.length > 1 || (loading && categorySessions.length > 0))}
           />
 
           {(categorySessions.length > 1 || (loading && categorySessions.length > 0)) && (
@@ -410,7 +427,7 @@ export default function App() {
               </div>
             )}
 
-            {!loading && !research && (
+            {!loading && categorySessions.length === 0 && (
               currentDate === new Date().toISOString().slice(0, 10) ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, gap: '12px' }}>
                   <div className="cat-bounce"><CatIcon size={70} /></div>
@@ -445,7 +462,7 @@ export default function App() {
             )}
 
             {categorySessions.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', paddingBottom: '70px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', paddingTop: '16px', paddingBottom: '70px' }}>
                 {activeTab < categorySessions.length ? (
                   <>
                     <TrendSummary trends={categorySessions[activeTab].trends || []} headline={categorySessions[activeTab].trendHeadline} />
@@ -525,7 +542,7 @@ export default function App() {
               </div>
             )}
 
-            {!loading && research && (
+            {!loading && categorySessions.length > 0 && (
             <div style={{
               position: 'sticky',
               bottom: 0,

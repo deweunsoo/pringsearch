@@ -33,7 +33,7 @@ let researchRunning = false
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 520,
-    height: 400,
+    height: 520,
     frame: false,
     transparent: true,
     hasShadow: true,

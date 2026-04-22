@@ -330,8 +330,8 @@ export default function Onboarding({ onComplete }: Props) {
               }}
               placeholder="기타 관심사 직접 입력 (Enter)"
               style={{
-                background: '#F2F4F6',
-                border: '1px solid transparent',
+                background: '#fff',
+                border: '1px solid #E5E7EB',
                 borderRadius: '10px',
                 padding: '10px 14px',
                 fontSize: '15px',
@@ -391,11 +391,12 @@ export default function Onboarding({ onComplete }: Props) {
             gap: '10px',
             WebkitAppRegion: 'no-drag' as any,
           }}>
-            <div style={{ display: 'flex', background: '#F2F4F6', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ display: 'flex', background: '#F2F4F6', borderRadius: '10px', overflow: 'hidden', flexShrink: 0, height: '44px' }}>
               <button
                 onClick={() => setIsAm(true)}
                 style={{
-                  padding: '10px 16px',
+                  padding: '0 16px',
+                  height: '44px',
                   fontSize: '16px',
                   fontWeight: 600,
                   border: 'none',
@@ -409,7 +410,8 @@ export default function Onboarding({ onComplete }: Props) {
               <button
                 onClick={() => setIsAm(false)}
                 style={{
-                  padding: '10px 16px',
+                  padding: '0 16px',
+                  height: '44px',
                   fontSize: '16px',
                   fontWeight: 600,
                   border: 'none',
@@ -430,13 +432,15 @@ export default function Onboarding({ onComplete }: Props) {
                 background: '#F2F4F6',
                 border: '1px solid transparent',
                 borderRadius: '10px',
-                padding: '10px 4px',
-                fontSize: '18px',
+                padding: '0 4px',
+                height: '44px',
+                fontSize: '16px',
                 fontWeight: 600,
                 color: '#333D4B',
                 width: '56px',
                 textAlign: 'center',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
             <span style={{ fontSize: '16px', color: '#6B7684', fontWeight: 500 }}>시</span>
@@ -449,13 +453,15 @@ export default function Onboarding({ onComplete }: Props) {
                 background: '#F2F4F6',
                 border: '1px solid transparent',
                 borderRadius: '10px',
-                padding: '10px 4px',
-                fontSize: '18px',
+                padding: '0 4px',
+                height: '44px',
+                fontSize: '16px',
                 fontWeight: 600,
                 color: '#333D4B',
                 width: '56px',
                 textAlign: 'center',
                 outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
             <span style={{ fontSize: '16px', color: '#6B7684', fontWeight: 500 }}>분</span>

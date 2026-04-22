@@ -12,6 +12,15 @@ interface Category {
   keywords: string[]
 }
 
+const PRESETS = [
+  { id: 'ai-dev', label: 'AI / 개발', emoji: '🤖', keywords: ['AI Agent', 'LLM', 'AI Coding', 'Generative AI'] },
+  { id: 'design', label: 'UX / 디자인', emoji: '🎨', keywords: ['UX Design', 'Design System', 'Generative UI', 'AI Design Tools'] },
+  { id: 'product', label: '프로덕트 / PM', emoji: '📊', keywords: ['Product Management', 'Growth', 'User Research', 'A/B Test'] },
+  { id: 'startup', label: '스타트업 / 비즈니스', emoji: '🚀', keywords: ['Startup', 'SaaS', 'Fundraising', 'AI Business'] },
+  { id: 'marketing', label: '마케팅', emoji: '📣', keywords: ['AI Marketing', 'Content AI', 'Growth Hacking', 'SEO'] },
+  { id: 'crypto', label: '크립토 / 핀테크', emoji: '💰', keywords: ['Stablecoin', 'DeFi', 'Web3', 'Fintech'] },
+]
+
 interface AppConfig {
   scheduleHour: number
   scheduleMinute: number
@@ -279,6 +288,43 @@ export default function Settings({ onBack, onRunNow }: Props) {
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>관심 키워드</span>
             <span style={{ fontSize: '12px', color: '#B0B8C1', fontWeight: 500 }}>{config.categories.length}/10</span>
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+            {PRESETS.map(preset => {
+              const selected = preset.keywords.every(k => config.categories.some(c => c.name === k))
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    if (selected) {
+                      save({ categories: config.categories.filter(c => !preset.keywords.includes(c.name)) })
+                    } else {
+                      const existing = new Set(config.categories.map(c => c.name))
+                      const toAdd = preset.keywords.filter(k => !existing.has(k)).map(k => ({ name: k, keywords: [k] }))
+                      save({ categories: [...config.categories, ...toAdd].slice(0, 10) })
+                    }
+                  }}
+                  style={{
+                    padding: '8px 10px',
+                    background: selected ? '#EBF3FE' : '#fff',
+                    border: selected ? '1.5px solid #3182F6' : '1px solid #E5E7EB',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '13px',
+                    fontWeight: selected ? 600 : 500,
+                    color: selected ? '#3182F6' : '#4E5968',
+                    letterSpacing: '-0.2px',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: '15px' }}>{preset.emoji}</span>
+                  {preset.label}
+                </button>
+              )
+            })}
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
             {config.categories.map((cat, i) => (
               <span key={i} style={{
@@ -342,8 +388,7 @@ export default function Settings({ onBack, onRunNow }: Props) {
               gap: '10px',
               padding: '12px 14px',
               background: aiProvider.provider !== 'none' ? '#EBF8EE' : '#FFF3E0',
-              borderRadius: '10px',
-              marginBottom: config.anthropicApiKey ? '0' : '10px'
+              borderRadius: '10px'
             }}>
               <div style={{
                 width: '8px',
