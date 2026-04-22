@@ -13,6 +13,8 @@ declare global {
       saveBookmark: (item: any) => Promise<void>
       removeBookmark: (id: string) => Promise<void>
       onResearchComplete: (callback: (result: any) => void) => () => void
+      checkUpdate: () => Promise<{ version: string; url: string } | null>
+      openUpdateDialog: (info: { version: string; url: string }) => Promise<void>
       saveMarkdown: (filePath: string, content: string) => Promise<void>
       pickFolder: () => Promise<string | null>
       runDiscussion: (research: any) => Promise<any[]>

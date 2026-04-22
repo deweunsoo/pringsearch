@@ -25,5 +25,8 @@ contextBridge.exposeInMainWorld('api', {
     const handler = (_event: any, result: any) => callback(result)
     ipcRenderer.on('research-complete', handler)
     return () => ipcRenderer.removeListener('research-complete', handler)
-  }
+  },
+  checkUpdate: () => ipcRenderer.invoke('check-update'),
+  openUpdateDialog: (info: { version: string; url: string }) =>
+    ipcRenderer.invoke('open-update-dialog', info),
 })

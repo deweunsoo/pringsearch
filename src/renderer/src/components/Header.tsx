@@ -9,6 +9,8 @@ interface HeaderProps {
   loading: boolean
   scrolled?: boolean
   chatCount?: number
+  hasUpdate?: boolean
+  onUpdateClick?: () => void
 }
 
 const SettingsIcon = () => (
@@ -17,7 +19,7 @@ const SettingsIcon = () => (
   </svg>
 )
 
-export default function Header({ onSettingsClick, onChatClick, onClear, loading, scrolled, chatCount }: HeaderProps) {
+export default function Header({ onSettingsClick, onChatClick, onClear, loading, scrolled, chatCount, hasUpdate, onUpdateClick }: HeaderProps) {
   return (
     <div style={{
       display: 'flex',
@@ -62,6 +64,25 @@ export default function Header({ onSettingsClick, onChatClick, onClear, loading,
           Pringsearch
           {import.meta.env.DEV && (
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#F59E0B', background: '#FEF3C7', borderRadius: '4px', padding: '1px 5px', letterSpacing: '0.5px' }}>DEV</span>
+          )}
+          {hasUpdate && (
+            <button
+              onClick={onUpdateClick}
+              className="update-badge-btn"
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                background: '#22C55E',
+                border: 'none',
+                borderRadius: '4px',
+                padding: '2px 6px',
+                letterSpacing: '0.5px',
+                cursor: 'pointer',
+              }}
+            >
+              Update
+            </button>
           )}
         </h1>
       </div>

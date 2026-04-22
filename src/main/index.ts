@@ -214,6 +214,29 @@ function setupIPC(): void {
     if (mainWindow?.isMaximized()) mainWindow.unmaximize()
     else mainWindow?.maximize()
   })
+  ipcMain.handle('check-update', () => fetchLatestUpdate())
+  ipcMain.handle('open-update-dialog', async (_e, info: { version: string; url: string }) => {
+    const { response } = await dialog.showMessageBox(mainWindow!, {
+      type: 'info',
+      title: '업데이트 알림',
+      message: `새 버전(v${info.version})이 있어요!`,
+      detail: '다운로드 페이지에서 최신 버전을 받을 수 있어요.',
+      buttons: ['업데이트', '나중에'],
+      defaultId: 0,
+    })
+    if (response !== 0) return
+    try {
+      await shell.openExternal(info.url)
+    } catch {
+      clipboard.writeText(info.url)
+      dialog.showMessageBox(mainWindow!, {
+        type: 'info',
+        title: '링크 복사됨',
+        message: '브라우저를 열 수 없어서 링크를 클립보드에 복사했어요.',
+        detail: info.url,
+      })
+    }
+  })
 }
 
 app.whenReady().then(() => {
@@ -231,7 +254,6 @@ app.whenReady().then(() => {
   scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   trayManager.create(mainWindow!, runResearch)
 
-  if (app.isPackaged) checkForUpdate()
 })
 
 function isNewerVersion(latest: string, current: string): boolean {
@@ -245,24 +267,20 @@ function isNewerVersion(latest: string, current: string): boolean {
   return false
 }
 
-async function checkForUpdate(): Promise<void> {
+async function fetchLatestUpdate(): Promise<{ version: string; url: string } | null> {
   try {
     const res = await net.fetch('https://api.github.com/repos/deweunsoo/pringsearch/releases/latest')
-    if (!res.ok) return
+    if (!res.ok) return null
     const data: any = await res.json()
     const latest = String(data.tag_name || '').replace(/^v/, '')
-    if (!latest || !isNewerVersion(latest, app.getVersion())) return
-    const { response } = await dialog.showMessageBox(mainWindow!, {
-      type: 'info',
-      title: '업데이트 알림',
-      message: `새 버전(v${latest})이 있어요!`,
-      detail: '다운로드 페이지에서 최신 버전을 받을 수 있어요.',
-      buttons: ['업데이트', '나중에'],
-      defaultId: 0,
-    })
-    if (response === 0) shell.openExternal(data.html_url || 'https://github.com/deweunsoo/pringsearch/releases/latest')
+    if (!latest || !isNewerVersion(latest, app.getVersion())) return null
+    return {
+      version: latest,
+      url: data.html_url || 'https://github.com/deweunsoo/pringsearch/releases/latest',
+    }
   } catch (err: any) {
     fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update check error: ${err?.message || err}\n`)
+    return null
   }
 }
 

@@ -120,6 +120,17 @@ export default function App() {
     }
   }, [activeTab, categorySessions.length])
   const [downloadPath, setDownloadPath] = useState<string | null>(null)
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; url: string } | null>(null)
+  useEffect(() => {
+    const check = () => window.api.checkUpdate().then(info => setUpdateInfo(info))
+    check()
+    const id = setInterval(check, 5 * 60 * 1000)
+    window.addEventListener('focus', check)
+    return () => {
+      clearInterval(id)
+      window.removeEventListener('focus', check)
+    }
+  }, [])
   const [discussions, setDiscussions] = useState<Record<number, any[]>>(() => {
     try {
       const saved = localStorage.getItem(`discussions-${new Date().toISOString().slice(0, 10)}`)
@@ -299,6 +310,8 @@ export default function App() {
             loading={loading}
             scrolled={scrolled}
             chatCount={Object.values(discussions).filter(d => d.length > 0).length}
+            hasUpdate={!!updateInfo}
+            onUpdateClick={() => updateInfo && window.api.openUpdateDialog(updateInfo)}
           />
 
           <CategoryTabs
