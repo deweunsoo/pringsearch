@@ -180,7 +180,7 @@ ${context}
     }
   }
 
-  private async callAi(prompt: string): Promise<string> {
+  async callAi(prompt: string): Promise<string> {
     const { provider, path } = detectAiProvider(this.apiKey)
 
     switch (provider) {
