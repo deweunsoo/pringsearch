@@ -117,22 +117,17 @@ export default function Onboarding({ onComplete }: Props) {
     const scheduleHour = isAm ? (hour === 12 ? 0 : hour) : (hour === 12 ? 12 : hour + 12)
     const config = await window.api.getConfig()
 
-    // 관심사에 따라 RSS와 키워드 합치기 (중복 제거)
     const selected = PRESETS.filter(p => selectedInterests.includes(p.id))
     const rssMap = new Map<string, { name: string; url: string; enabled: boolean }>()
     const keywordSet = new Set<string>()
 
     for (const preset of selected) {
-      for (const rss of preset.rss) {
-        rssMap.set(rss.url, rss)
-      }
-      for (const kw of preset.keywords) {
-        keywordSet.add(kw)
-      }
+      for (const rss of preset.rss) rssMap.set(rss.url, rss)
+      for (const kw of preset.keywords) keywordSet.add(kw)
     }
-    for (const kw of customKeywords) {
-      keywordSet.add(kw)
-    }
+    for (const kw of customKeywords) keywordSet.add(kw)
+
+    const categories = Array.from(keywordSet).map(kw => ({ name: kw, keywords: [kw] }))
 
     await window.api.saveConfig({
       ...config,
@@ -140,10 +135,12 @@ export default function Onboarding({ onComplete }: Props) {
       scheduleMinute: minute,
       openAtLogin,
       setupCompleted: true,
-      ...(selected.length > 0 ? {
-        rssSources: Array.from(rssMap.values()),
-        keywords: Array.from(keywordSet),
-      } : {}),
+      ...(selected.length > 0 || customKeywords.length > 0
+        ? {
+            rssSources: Array.from(rssMap.values()),
+            categories,
+          }
+        : {}),
     })
     onComplete()
   }

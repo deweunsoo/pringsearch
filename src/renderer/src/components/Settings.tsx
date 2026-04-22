@@ -7,12 +7,17 @@ interface RssSource {
   enabled: boolean
 }
 
+interface Category {
+  name: string
+  keywords: string[]
+}
+
 interface AppConfig {
   scheduleHour: number
   scheduleMinute: number
   anthropicApiKey: string
   rssSources: RssSource[]
-  keywords: string[]
+  categories: Category[]
   notificationEnabled: boolean
   openAtLogin: boolean
   setupCompleted: boolean
@@ -272,10 +277,10 @@ export default function Settings({ onBack, onRunNow }: Props) {
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>관심 키워드</span>
-            <span style={{ fontSize: '12px', color: '#B0B8C1', fontWeight: 500 }}>{config.keywords.length}/10</span>
+            <span style={{ fontSize: '12px', color: '#B0B8C1', fontWeight: 500 }}>{config.categories.length}/10</span>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-            {config.keywords.map((kw, i) => (
+            {config.categories.map((cat, i) => (
               <span key={i} style={{
                 background: '#F2F4F6',
                 borderRadius: '8px',
@@ -288,9 +293,9 @@ export default function Settings({ onBack, onRunNow }: Props) {
                 gap: '4px',
                 letterSpacing: '-0.2px'
               }}>
-                {kw}
+                {cat.name}
                 <button
-                  onClick={() => save({ keywords: config.keywords.filter((_, j) => j !== i) })}
+                  onClick={() => save({ categories: config.categories.filter((_, j) => j !== i) })}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -313,8 +318,9 @@ export default function Settings({ onBack, onRunNow }: Props) {
             value={newKeyword}
             onChange={e => setNewKeyword(e.target.value)}
             onKeyDown={e => {
-              if (e.key === 'Enter' && newKeyword.trim() && config.keywords.length < 10) {
-                save({ keywords: [...config.keywords, newKeyword.trim()] })
+              const trimmed = newKeyword.trim()
+              if (e.key === 'Enter' && trimmed && config.categories.length < 10 && !config.categories.some(c => c.name === trimmed)) {
+                save({ categories: [...config.categories, { name: trimmed, keywords: [trimmed] }] })
                 setNewKeyword('')
               }
             }}
