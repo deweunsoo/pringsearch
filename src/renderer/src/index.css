@@ -15,7 +15,7 @@ button, a, input, select, textarea {
 
 .glass-panel {
   padding: 6px 16px 16px;
-  background: rgba(255, 255, 255, 0.6);
+  background: #ffffff;
   border: none;
   border-radius: 20px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.1);
@@ -115,6 +115,10 @@ button, a, input, select, textarea {
   position: relative;
 }
 
+[data-tooltip]:hover {
+  z-index: 1000;
+}
+
 [data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -130,6 +134,7 @@ button, a, input, select, textarea {
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s;
+  z-index: 1000;
 }
 
 [data-tooltip]:hover::after {
