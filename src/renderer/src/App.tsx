@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import Header from './components/Header'
+import CategoryTabs from './components/CategoryTabs'
 import TrendSummary from './components/TrendSummary'
 import InsightCards from './components/InsightCard'
 import ActionItems from './components/ActionItems'
@@ -82,6 +83,31 @@ export default function App() {
   const [showShareMenu, setShowShareMenu] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [activeTab, setActiveTab] = useState(0)
+  const [activeCategory, setActiveCategory] = useState<string>(() =>
+    localStorage.getItem('activeCategory') || ''
+  )
+  useEffect(() => {
+    if (activeCategory) localStorage.setItem('activeCategory', activeCategory)
+  }, [activeCategory])
+  const categoryNames = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of sessions) set.add(s.category || 'Legacy')
+    return Array.from(set)
+  }, [sessions])
+  useEffect(() => {
+    if (categoryNames.length === 0) return
+    if (!categoryNames.includes(activeCategory)) setActiveCategory(categoryNames[0])
+  }, [categoryNames, activeCategory])
+  const categorySessionsWithIdx = useMemo(
+    () => sessions.map((s, gi) => ({ s, gi })).filter(x => (x.s.category || 'Legacy') === activeCategory),
+    [sessions, activeCategory]
+  )
+  const categorySessions = useMemo(() => categorySessionsWithIdx.map(x => x.s), [categorySessionsWithIdx])
+  useEffect(() => {
+    if (activeTab >= categorySessions.length && categorySessions.length > 0) {
+      setActiveTab(categorySessions.length - 1)
+    }
+  }, [activeTab, categorySessions.length])
   const [downloadPath, setDownloadPath] = useState<string | null>(null)
   const [discussions, setDiscussions] = useState<Record<number, any[]>>(() => {
     try {
@@ -259,7 +285,13 @@ export default function App() {
             chatCount={Object.values(discussions).filter(d => d.length > 0).length}
           />
 
-          {(sessions.length > 1 || (loading && sessions.length > 0)) && (
+          <CategoryTabs
+            categories={categoryNames}
+            active={activeCategory}
+            onChange={name => { setActiveCategory(name); setActiveTab(0) }}
+          />
+
+          {(categorySessions.length > 1 || (loading && categorySessions.length > 0)) && (
             <div className="hide-scrollbar" style={{
               display: 'flex',
               alignItems: 'center',
@@ -269,11 +301,11 @@ export default function App() {
               overflowX: 'auto',
               flexShrink: 0,
             }}>
-              {sessions.map((s, i) => {
+              {categorySessionsWithIdx.map(({ gi }, i) => {
                 const isActive = activeTab === i
                 return (
                   <div
-                    key={i}
+                    key={gi}
                     style={{
                       position: 'relative',
                       display: 'flex',
@@ -300,11 +332,11 @@ export default function App() {
                     >
                       리서치 {i + 1}
                     </button>
-                    {sessions.length > 1 && (
+                    {categorySessions.length > 1 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          deleteSession(i)
+                          deleteSession(gi)
                           if (activeTab >= i && activeTab > 0) setActiveTab(activeTab - 1)
                         }}
                         style={{
@@ -337,15 +369,15 @@ export default function App() {
                   </div>
                 )
               })}
-              {loading && sessions.length > 0 && (
+              {loading && categorySessions.length > 0 && (
                 <button
-                  onClick={() => setActiveTab(sessions.length)}
+                  onClick={() => setActiveTab(categorySessions.length)}
                   style={{
                     padding: '5px 12px',
                     fontSize: '13px',
-                    fontWeight: activeTab === sessions.length ? 600 : 400,
-                    color: activeTab === sessions.length ? '#333D4B' : '#8B95A1',
-                    background: activeTab === sessions.length ? '#F2F4F6' : 'transparent',
+                    fontWeight: activeTab === categorySessions.length ? 600 : 400,
+                    color: activeTab === categorySessions.length ? '#333D4B' : '#8B95A1',
+                    background: activeTab === categorySessions.length ? '#F2F4F6' : 'transparent',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: 'pointer',
@@ -353,7 +385,7 @@ export default function App() {
                     letterSpacing: '-0.2px',
                   }}
                 >
-                  리서치 {sessions.length + 1}<span style={{ fontSize: '11px', color: '#B0B8C1', marginLeft: '4px' }}>분석중</span>
+                  리서치 {categorySessions.length + 1}<span style={{ fontSize: '11px', color: '#B0B8C1', marginLeft: '4px' }}>분석중</span>
                 </button>
               )}
             </div>
@@ -412,13 +444,13 @@ export default function App() {
               )
             )}
 
-            {sessions.length > 0 && (
+            {categorySessions.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', paddingBottom: '70px' }}>
-                {activeTab < sessions.length ? (
+                {activeTab < categorySessions.length ? (
                   <>
-                    <TrendSummary trends={sessions[activeTab].trends || []} headline={sessions[activeTab].trendHeadline} />
-                    <InsightCards insights={sessions[activeTab].insights || []} headline={sessions[activeTab].insightHeadline} />
-                    <ActionItems actions={sessions[activeTab].actions || []} headline={sessions[activeTab].actionHeadline} />
+                    <TrendSummary trends={categorySessions[activeTab].trends || []} headline={categorySessions[activeTab].trendHeadline} />
+                    <InsightCards insights={categorySessions[activeTab].insights || []} headline={categorySessions[activeTab].insightHeadline} />
+                    <ActionItems actions={categorySessions[activeTab].actions || []} headline={categorySessions[activeTab].actionHeadline} />
                   </>
                 ) : loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '48px 0' }}>
@@ -433,7 +465,7 @@ export default function App() {
                     <p style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>추가 리서치 중...</p>
                     <p style={{ fontSize: '16px', color: '#9ca3af', margin: 0 }}>새로운 자료를 확인하고 있어요.</p>
                     <button
-                      onClick={() => { cancelAdd(); setActiveTab(Math.max(0, sessions.length - 1)) }}
+                      onClick={() => { cancelAdd(); setActiveTab(Math.max(0, categorySessions.length - 1)) }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                       style={{
@@ -457,7 +489,7 @@ export default function App() {
                   <div>
                     <button
                       onClick={() => {
-                        setActiveTab(sessions.length)
+                        setActiveTab(categorySessions.length)
                         addResearch()
                       }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}

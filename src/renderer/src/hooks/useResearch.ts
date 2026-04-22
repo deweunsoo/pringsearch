@@ -62,17 +62,22 @@ export function useResearch() {
       setLoading(false)
     })
 
-    const cleanup = window.api.onResearchComplete(result => {
+    const cleanup = window.api.onResearchComplete(payload => {
       const elapsed = Date.now() - loadingStartRef.current
       const minDelay = Math.max(0, 3000 - elapsed)
       setTimeout(() => {
-        if (result) {
+        const incoming: any[] = payload?.results
+          ? payload.results
+          : payload
+            ? [payload]
+            : []
+        if (incoming.length > 0) {
           if (isAddingRef.current) {
-            setSessions(prev => [...prev, result])
+            setSessions(prev => [...prev, ...incoming])
           } else {
-            setSessions([result])
+            setSessions(incoming)
           }
-          setCurrentDate(result.date)
+          setCurrentDate(incoming[0].date)
         }
         isAddingRef.current = false
         setLoading(false)
