@@ -26,7 +26,10 @@ vi.mock('./analyzer', () => ({
   ClaudeAnalyzer: class {
     async analyze(articles: any[]) {
       return {
-        trends: [{ text: `Analyzed ${articles.length} articles`, relatedUrls: [] }],
+        trendHeadline: '',
+        insightHeadline: '',
+        actionHeadline: '',
+        trends: [{ keywords: [], text: `Analyzed ${articles.length} articles`, relatedUrls: [] }],
         insights: [{ title: 'Insight', body: 'Body', relatedUrls: [] }],
         actions: [{ text: 'Action', category: 'study' }]
       }
@@ -35,15 +38,17 @@ vi.mock('./analyzer', () => ({
 }))
 
 describe('ResearchOrchestrator', () => {
-  it('collects from all sources, deduplicates by URL, and analyzes', async () => {
+  it('collects from all sources, deduplicates by URL, and analyzes with category name', async () => {
     const orchestrator = new ResearchOrchestrator()
     const config = {
       rssSources: [{ name: 'Test', url: 'https://test.com/feed', enabled: true }],
-      keywords: ['AI']
+      categories: [{ name: 'AI Agent', keywords: ['AI'] }]
     }
-    const result = await orchestrator.run(config as any)
+    const category = { name: 'AI Agent', keywords: ['AI'] }
+    const result = await orchestrator.run(config as any, category)
     expect(result.rawArticles.length).toBe(2)
     expect(result.trends[0].text).toBe('Analyzed 2 articles')
     expect(result.date).toBe(new Date().toISOString().split('T')[0])
+    expect(result.category).toBe('AI Agent')
   })
 })
