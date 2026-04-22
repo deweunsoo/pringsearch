@@ -1,7 +1,37 @@
 import fs from 'fs'
 import path from 'path'
-import type { AppConfig, ResearchResult, BookmarkItem } from '../../shared/types'
+import type { AppConfig, Category, ResearchResult, BookmarkItem } from '../../shared/types'
 import { DEFAULT_CONFIG } from '../../shared/types'
+
+const ONBOARDING_PRESETS: Category[] = [
+  { name: 'AI Agent', keywords: ['AI Agent', 'LLM', 'AI Coding', 'Generative AI'] },
+  { name: 'UX Design', keywords: ['UX Design', 'Design System', 'Generative UI', 'AI Design Tools'] },
+  { name: 'Product', keywords: ['Product Management', 'Growth', 'User Research', 'A/B Test'] },
+  { name: 'Startup', keywords: ['Startup', 'SaaS', 'Fundraising', 'AI Business'] },
+  { name: 'Marketing', keywords: ['AI Marketing', 'Content AI', 'Growth Hacking', 'SEO'] },
+  { name: 'Web3', keywords: ['Stablecoin', 'DeFi', 'Web3', 'Fintech'] },
+]
+
+export function migrateConfig(raw: any): AppConfig {
+  if (Array.isArray(raw?.categories)) {
+    const { keywords: _drop, ...rest } = raw
+    return { ...DEFAULT_CONFIG, ...rest } as AppConfig
+  }
+  const legacyKeywords: string[] = Array.isArray(raw?.keywords) ? raw.keywords : []
+  const categories: Category[] = []
+  const claimed = new Set<string>()
+  for (const preset of ONBOARDING_PRESETS) {
+    const hit = preset.keywords.filter(k => legacyKeywords.includes(k))
+    if (hit.length > 0) {
+      categories.push({ name: preset.name, keywords: hit })
+      hit.forEach(k => claimed.add(k))
+    }
+  }
+  const custom = legacyKeywords.filter(k => !claimed.has(k))
+  if (custom.length > 0) categories.push({ name: 'Custom', keywords: custom })
+  const { keywords: _drop, ...rest } = raw || {}
+  return { ...DEFAULT_CONFIG, ...rest, categories } as AppConfig
+}
 
 export class StorageService {
   private basePath: string
@@ -23,12 +53,11 @@ export class StorageService {
     try {
       const raw = fs.readFileSync(this.configPath, 'utf-8')
       const parsed = JSON.parse(raw)
-      // geminiApiKey → anthropicApiKey 마이그레이션
       if (parsed.geminiApiKey && !parsed.anthropicApiKey) {
         parsed.anthropicApiKey = parsed.geminiApiKey
       }
       delete parsed.geminiApiKey
-      return { ...DEFAULT_CONFIG, ...parsed }
+      return migrateConfig(parsed)
     } catch {
       return { ...DEFAULT_CONFIG }
     }
@@ -42,8 +71,9 @@ export class StorageService {
     try {
       const raw = fs.readFileSync(this.researchPath(date), 'utf-8')
       const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed.length > 0 ? parsed : null
-      return parsed ? [parsed] : null
+      const arr: ResearchResult[] = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : [])
+      if (arr.length === 0) return null
+      return arr.map(r => ({ ...r, category: r.category ?? 'Legacy' }))
     } catch {
       return null
     }

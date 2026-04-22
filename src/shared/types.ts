@@ -27,6 +27,7 @@ export interface ActionItem {
 export interface ResearchResult {
   date: string
   generatedAt: string
+  category: string
   trendHeadline: string
   insightHeadline: string
   actionHeadline: string
@@ -34,6 +35,17 @@ export interface ResearchResult {
   trends: TrendItem[]
   insights: InsightItem[]
   actions: ActionItem[]
+}
+
+export interface Category {
+  name: string
+  keywords: string[]
+}
+
+export interface TopIssue {
+  categoryName: string
+  headline: string
+  body: string
 }
 
 export interface DiscussionMessage {
@@ -60,7 +72,7 @@ export interface AppConfig {
   scheduleMinute: number
   anthropicApiKey: string
   rssSources: RssSource[]
-  keywords: string[]
+  categories: Category[]
   notificationEnabled: boolean
   openAtLogin: boolean
   setupCompleted: boolean
@@ -77,7 +89,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     { name: 'The Verge - AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', enabled: true },
     { name: 'TechCrunch - AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', enabled: true }
   ],
-  keywords: ['AI Agent', 'AI Coding', 'LLM', 'Generative AI'],
+  categories: [{ name: 'AI Agent', keywords: ['AI Agent', 'AI Coding', 'LLM', 'Generative AI'] }],
   notificationEnabled: true,
   openAtLogin: false,
   setupCompleted: false,
