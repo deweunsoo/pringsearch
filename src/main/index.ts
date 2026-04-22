@@ -6,10 +6,13 @@ import path from 'path'
 import os from 'os'
 import { StorageService } from './services/storage'
 import { ResearchOrchestrator } from './services/orchestrator'
+import { MultiCategoryOrchestrator } from './services/multi-category-orchestrator'
+import { TopIssuePicker } from './services/top-issue-picker'
 import { ClaudeAnalyzer, detectAiProvider } from './services/analyzer'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 import { autoUpdater } from 'electron-updater'
+import type { ResearchResult } from '../shared/types'
 
 // Prevent macOS Media Library TCC prompt ("access Apple Music / media library").
 // Chromium's SystemMediaControls loads MediaRemote.framework even when the app has
@@ -34,8 +37,6 @@ function createWindow(): void {
     frame: false,
     transparent: true,
     hasShadow: true,
-    vibrancy: 'fullscreen-ui',
-    visualEffectState: 'active',
     backgroundColor: '#00000000',
     alwaysOnTop: false,
     resizable: true,
@@ -76,30 +77,35 @@ async function runResearch(): Promise<void> {
 
   try {
     const fs = require('fs')
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Starting research...\n`)
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Starting research for ${config.categories.length} categories...\n`)
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const existingResults = storage.loadResearch(today) || []
-    const orchestrator = new ResearchOrchestrator(config.anthropicApiKey)
-    const result = await orchestrator.run(config, existingResults)
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Result trends=${result.trends?.length || 0} insights=${result.insights?.length || 0} actions=${result.actions?.length || 0} articles=${result.rawArticles?.length || 0}\n`)
-    const hasContent = result.trends.length > 0 || result.insights.length > 0
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] hasContent=${hasContent}, trends=${result.trends.length}, insights=${result.insights.length}\n`)
 
-    if (hasContent) {
-      storage.saveResearch(result)
+    const existingByCategory: Record<string, ResearchResult[]> = {}
+    for (const r of existingResults) {
+      (existingByCategory[r.category] ||= []).push(r)
     }
 
-    mainWindow?.webContents.send('research-complete', hasContent ? result : null)
+    const orchestrator = new ResearchOrchestrator(config.anthropicApiKey)
+    const picker = new TopIssuePicker(orchestrator.analyzer)
+    const multi = new MultiCategoryOrchestrator(orchestrator, picker)
 
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] notificationEnabled=${config.notificationEnabled}, Notification.isSupported=${Notification.isSupported()}\n`)
-    if (config.notificationEnabled) {
+    const { results, topIssue } = await multi.run(config, existingByCategory)
+    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Completed ${results.length} categories, topIssue=${topIssue.categoryName}\n`)
+
+    for (const r of results) {
+      const hasContent = r.trends.length > 0 || r.insights.length > 0
+      if (hasContent) storage.saveResearch(r)
+    }
+
+    mainWindow?.webContents.send('research-complete', { results, topIssue })
+
+    if (config.notificationEnabled && results.length > 0) {
       const n = new Notification({
-        title: '오늘의 AI 리서치 도착',
-        body: result.trendHeadline || '새로운 리서치가 준비되었습니다.'
+        title: '오늘의 리서치 준비 완료',
+        body: `[${topIssue.categoryName}] ${topIssue.headline}`,
       })
-      n.on('show', () => fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Notification shown\n`))
-      n.on('failed', (_, err) => fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Notification failed: ${err}\n`))
       n.show()
     }
   } catch (error: any) {
@@ -183,7 +189,7 @@ function setupIPC(): void {
   })
   ipcMain.handle('save-markdown', async (_e, defaultName: string, content: string) => {
     const result = await dialog.showSaveDialog(mainWindow!, {
-      defaultPath: defaultName,
+      defaultPath: path.join(DATA_PATH, defaultName),
       filters: [{ name: 'Markdown', extensions: ['md'] }]
     })
     if (result.canceled || !result.filePath) return null
@@ -191,7 +197,10 @@ function setupIPC(): void {
     return result.filePath
   })
   ipcMain.handle('pick-folder', async () => {
-    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })
+    const result = await dialog.showOpenDialog({
+      defaultPath: DATA_PATH,
+      properties: ['openDirectory']
+    })
     if (result.canceled || result.filePaths.length === 0) return null
     return result.filePaths[0]
   })
