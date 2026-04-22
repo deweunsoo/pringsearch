@@ -3,32 +3,13 @@ import path from 'path'
 import type { AppConfig, Category, ResearchResult, BookmarkItem } from '../../shared/types'
 import { DEFAULT_CONFIG } from '../../shared/types'
 
-const ONBOARDING_PRESETS: Category[] = [
-  { name: 'AI Agent', keywords: ['AI Agent', 'LLM', 'AI Coding', 'Generative AI'] },
-  { name: 'UX Design', keywords: ['UX Design', 'Design System', 'Generative UI', 'AI Design Tools'] },
-  { name: 'Product', keywords: ['Product Management', 'Growth', 'User Research', 'A/B Test'] },
-  { name: 'Startup', keywords: ['Startup', 'SaaS', 'Fundraising', 'AI Business'] },
-  { name: 'Marketing', keywords: ['AI Marketing', 'Content AI', 'Growth Hacking', 'SEO'] },
-  { name: 'Web3', keywords: ['Stablecoin', 'DeFi', 'Web3', 'Fintech'] },
-]
-
 export function migrateConfig(raw: any): AppConfig {
   if (Array.isArray(raw?.categories)) {
     const { keywords: _drop, ...rest } = raw
     return { ...DEFAULT_CONFIG, ...rest } as AppConfig
   }
   const legacyKeywords: string[] = Array.isArray(raw?.keywords) ? raw.keywords : []
-  const categories: Category[] = []
-  const claimed = new Set<string>()
-  for (const preset of ONBOARDING_PRESETS) {
-    const hit = preset.keywords.filter(k => legacyKeywords.includes(k))
-    if (hit.length > 0) {
-      categories.push({ name: preset.name, keywords: hit })
-      hit.forEach(k => claimed.add(k))
-    }
-  }
-  const custom = legacyKeywords.filter(k => !claimed.has(k))
-  if (custom.length > 0) categories.push({ name: 'Custom', keywords: custom })
+  const categories: Category[] = legacyKeywords.map(k => ({ name: k, keywords: [k] }))
   const { keywords: _drop, ...rest } = raw || {}
   return { ...DEFAULT_CONFIG, ...rest, categories } as AppConfig
 }

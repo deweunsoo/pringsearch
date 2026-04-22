@@ -89,7 +89,12 @@ export const DEFAULT_CONFIG: AppConfig = {
     { name: 'The Verge - AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', enabled: true },
     { name: 'TechCrunch - AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', enabled: true }
   ],
-  categories: [{ name: 'AI Agent', keywords: ['AI Agent', 'AI Coding', 'LLM', 'Generative AI'] }],
+  categories: [
+    { name: 'AI Agent', keywords: ['AI Agent'] },
+    { name: 'AI Coding', keywords: ['AI Coding'] },
+    { name: 'LLM', keywords: ['LLM'] },
+    { name: 'Generative AI', keywords: ['Generative AI'] },
+  ],
   notificationEnabled: true,
   openAtLogin: false,
   setupCompleted: false,

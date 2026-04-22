@@ -36,24 +36,23 @@ describe('StorageService', () => {
   })
 
   describe('config migration', () => {
-    it('migrates flat keywords to matched preset categories', () => {
+    it('migrates flat keywords to one category per keyword', () => {
       const legacy = {
-        keywords: ['AI Agent', 'LLM', 'UX Design', 'Design System', 'Random'],
+        keywords: ['AI Agent', 'LLM', 'Random'],
         scheduleHour: 9,
       }
       const migrated = migrateConfig(legacy)
-      const names = migrated.categories.map(c => c.name)
-      expect(names).toContain('AI Agent')
-      expect(names).toContain('UX Design')
-      expect(names).toContain('Custom')
-      const custom = migrated.categories.find(c => c.name === 'Custom')!
-      expect(custom.keywords).toEqual(['Random'])
+      expect(migrated.categories).toEqual([
+        { name: 'AI Agent', keywords: ['AI Agent'] },
+        { name: 'LLM', keywords: ['LLM'] },
+        { name: 'Random', keywords: ['Random'] },
+      ])
       expect((migrated as any).keywords).toBeUndefined()
     })
 
     it('passes through already-migrated config', () => {
       const already = {
-        categories: [{ name: 'AI Agent', keywords: ['LLM'] }],
+        categories: [{ name: 'AI Agent', keywords: ['AI Agent'] }],
         scheduleHour: 11,
       }
       const migrated = migrateConfig(already)
