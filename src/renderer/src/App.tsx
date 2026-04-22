@@ -95,16 +95,7 @@ export default function App() {
       setConfigCategoryNames((c?.categories || []).map((x: any) => x.name))
     })
   }, [])
-  const categoryNames = useMemo(() => {
-    const ordered: string[] = []
-    for (const n of configCategoryNames) if (!ordered.includes(n)) ordered.push(n)
-    for (const s of sessions) {
-      const n = s.category
-      if (!n || n === 'Legacy') continue
-      if (!ordered.includes(n)) ordered.push(n)
-    }
-    return ordered
-  }, [sessions, configCategoryNames])
+  const categoryNames = useMemo(() => configCategoryNames, [configCategoryNames])
   useEffect(() => {
     if (categoryNames.length === 0) return
     if (!categoryNames.includes(activeCategory)) setActiveCategory(categoryNames[0])
