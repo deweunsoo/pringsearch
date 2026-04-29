@@ -141,6 +141,8 @@ export default function App() {
     if (showSettings && settingsRef.current) {
       const h = settingsRef.current.scrollHeight
       window.api.resizeWindow(h + 40)
+    } else if (loading && sessions.length > 0) {
+      return
     } else if (sessions.length > 0 && contentRef.current) {
       const contentH = contentRef.current.scrollHeight
       window.api.resizeWindow(contentH + 140)
@@ -336,7 +338,7 @@ export default function App() {
                     <button
                       onClick={() => setActiveTab(i)}
                       style={{
-                        padding: '5px 28px 5px 12px',
+                        padding: categorySessions.length > 1 ? '5px 28px 5px 12px' : '5px 12px',
                         fontSize: '13px',
                         fontWeight: isActive ? 600 : 400,
                         color: isActive ? '#333D4B' : '#8B95A1',
