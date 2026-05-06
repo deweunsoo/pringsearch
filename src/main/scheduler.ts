@@ -7,15 +7,20 @@ import { execFile } from 'child_process'
 const AGENT_LABEL = 'com.pringsearch.wake'
 const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${AGENT_LABEL}.plist`)
 
+const MAX_RETRIES = 3
+
 export class Scheduler {
   private interval: ReturnType<typeof setInterval> | null = null
   private hour = 0
   private minute = 0
-  private callback: (() => void) | null = null
+  private callback: (() => void | Promise<void>) | null = null
   private lastRunDate: string | null = null
   private running = false
+  private failureCount = 0
+  private failureDate: string | null = null
+  onFailureExhausted?: () => void
 
-  start(hour: number, minute: number, callback: () => void, openAtLogin = false): void {
+  start(hour: number, minute: number, callback: () => void | Promise<void>, openAtLogin = false): void {
     this.stop()
     this.hour = hour
     this.minute = minute
@@ -48,7 +53,7 @@ export class Scheduler {
     powerMonitor.removeListener('resume', this.onResume)
   }
 
-  reschedule(hour: number, minute: number, callback: () => void, openAtLogin = false): void {
+  reschedule(hour: number, minute: number, callback: () => void | Promise<void>, openAtLogin = false): void {
     this.start(hour, minute, callback, openAtLogin)
   }
 
@@ -76,12 +81,28 @@ export class Scheduler {
     const scheduledMinutes = this.hour * 60 + this.minute
     if (currentMinutes < scheduledMinutes) return
 
-    // 실행 (async callback 대응)
+    // 실행 (async callback 대응) — 성공하면 오늘 완료 처리,
+    // 실패하면 MAX_RETRIES까지 1분 간격으로 재시도
     this.running = true
-    this.lastRunDate = today
-    Promise.resolve(this.callback()).finally(() => {
-      this.running = false
-    })
+    Promise.resolve(this.callback())
+      .then(() => {
+        this.lastRunDate = today
+        this.failureCount = 0
+      })
+      .catch(() => {
+        if (this.failureDate !== today) {
+          this.failureDate = today
+          this.failureCount = 0
+        }
+        this.failureCount++
+        if (this.failureCount >= MAX_RETRIES) {
+          this.lastRunDate = today
+          try { this.onFailureExhausted?.() } catch {}
+        }
+      })
+      .finally(() => {
+        this.running = false
+      })
   }
 
   private installLaunchAgent(): void {

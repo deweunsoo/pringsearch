@@ -277,9 +277,11 @@ ${context}
     return new Promise((resolve, reject) => {
       const os = require('os')
       const path = require('path')
+      const { randomUUID } = require('crypto')
 
       // 프롬프트를 임시 파일로 저장하고 cat으로 파이프
-      const tmpFile = path.join(os.tmpdir(), `pringsearch-prompt-${Date.now()}.txt`)
+      // randomUUID — 병렬 호출 시 Date.now() ms 충돌 방지
+      const tmpFile = path.join(os.tmpdir(), `pringsearch-prompt-${randomUUID()}.txt`)
       fs.writeFileSync(tmpFile, prompt, 'utf-8')
 
       const shell = spawn('sh', ['-c', `cat "${tmpFile}" | "${cliPath}" ${args.map(a => `"${a}"`).join(' ')}`], {

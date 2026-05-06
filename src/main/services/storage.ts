@@ -3,6 +3,39 @@ import path from 'path'
 import type { AppConfig, Category, ResearchResult, BookmarkItem } from '../../shared/types'
 import { DEFAULT_CONFIG } from '../../shared/types'
 
+const ENC_PREFIX = 'enc:v1:'
+
+function getSafeStorage(): { encryptString(s: string): Buffer; decryptString(b: Buffer): string; isEncryptionAvailable(): boolean } | null {
+  try {
+    const electron = require('electron')
+    const ss = electron?.safeStorage
+    if (ss && typeof ss.isEncryptionAvailable === 'function' && ss.isEncryptionAvailable()) return ss
+    return null
+  } catch {
+    return null
+  }
+}
+
+function encryptApiKey(plain: string): string {
+  if (!plain) return ''
+  if (plain.startsWith(ENC_PREFIX)) return plain
+  const ss = getSafeStorage()
+  if (!ss) return plain
+  return ENC_PREFIX + ss.encryptString(plain).toString('base64')
+}
+
+function decryptApiKey(stored: string): string {
+  if (!stored) return ''
+  if (!stored.startsWith(ENC_PREFIX)) return stored
+  const ss = getSafeStorage()
+  if (!ss) return ''
+  try {
+    return ss.decryptString(Buffer.from(stored.slice(ENC_PREFIX.length), 'base64'))
+  } catch {
+    return ''
+  }
+}
+
 export function migrateConfig(raw: any): AppConfig {
   if (Array.isArray(raw?.categories)) {
     const { keywords: _drop, ...rest } = raw
@@ -38,6 +71,9 @@ export class StorageService {
         parsed.anthropicApiKey = parsed.geminiApiKey
       }
       delete parsed.geminiApiKey
+      if (parsed.anthropicApiKey) {
+        parsed.anthropicApiKey = decryptApiKey(parsed.anthropicApiKey)
+      }
       return migrateConfig(parsed)
     } catch {
       return { ...DEFAULT_CONFIG }
@@ -45,7 +81,11 @@ export class StorageService {
   }
 
   saveConfig(config: AppConfig): void {
-    fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), 'utf-8')
+    const toWrite = {
+      ...config,
+      anthropicApiKey: config.anthropicApiKey ? encryptApiKey(config.anthropicApiKey) : '',
+    }
+    fs.writeFileSync(this.configPath, JSON.stringify(toWrite, null, 2), 'utf-8')
   }
 
   loadResearch(date: string): ResearchResult[] | null {

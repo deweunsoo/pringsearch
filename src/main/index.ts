@@ -1,4 +1,3 @@
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 import { app, BrowserWindow, ipcMain, Notification, screen, clipboard, net, shell, dialog } from 'electron'
 import fs from 'fs'
 import { execFile } from 'child_process'
@@ -29,6 +28,23 @@ const trayManager = new TrayManager()
 let mainWindow: BrowserWindow | null = null
 let researchRunning = false
 
+function isSafeHttpUrl(raw: string): boolean {
+  try {
+    const { protocol } = new URL(raw)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function logLine(msg: string): void {
+  try {
+    const dir = app.getPath('logs')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.appendFileSync(path.join(dir, 'pringsearch.log'), `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {}
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 520,
@@ -58,7 +74,7 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => mainWindow?.show())
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (isSafeHttpUrl(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
 
@@ -75,8 +91,7 @@ async function runResearch(): Promise<void> {
   const config = storage.loadConfig()
 
   try {
-    const fs = require('fs')
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Starting research for ${config.categories.length} categories...\n`)
+    logLine(`Starting research for ${config.categories.length} categories...`)
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const existingResults = storage.loadResearch(today) || []
@@ -91,7 +106,7 @@ async function runResearch(): Promise<void> {
     const multi = new MultiCategoryOrchestrator(orchestrator, picker)
 
     const { results, topIssue } = await multi.run(config, existingByCategory)
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Completed ${results.length} categories, topIssue=${topIssue.categoryName}\n`)
+    logLine(`Completed ${results.length} categories, topIssue=${topIssue.categoryName}`)
 
     for (const r of results) {
       const hasContent = r.trends.length > 0 || r.insights.length > 0
@@ -108,13 +123,22 @@ async function runResearch(): Promise<void> {
       n.show()
     }
   } catch (error: any) {
-    const fs = require('fs')
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] FAILED: ${error?.message || error}\n`)
+    logLine(`FAILED: ${error?.message || error}`)
     console.error('[Research] Failed:', error?.message || error)
     mainWindow?.webContents.send('research-complete', null)
+    throw error
   } finally {
     researchRunning = false
   }
+}
+
+function notifyFailureExhausted(): void {
+  const config = storage.loadConfig()
+  if (!config.notificationEnabled) return
+  new Notification({
+    title: '리서치 실패',
+    body: '오늘 자동 리서치가 여러 번 실패했어요. 설정의 AI 키/네트워크를 확인해 주세요.',
+  }).show()
 }
 
 function setupIPC(): void {
@@ -137,7 +161,7 @@ function setupIPC(): void {
     }
     scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   })
-  ipcMain.handle('run-research-now', () => runResearch())
+  ipcMain.handle('run-research-now', () => runResearch().catch(() => {}))
   ipcMain.handle('delete-research', (_e, date: string, index: number) => storage.deleteResearchAt(date, index))
   ipcMain.handle('get-bookmarks', () => storage.loadBookmarks())
   ipcMain.handle('save-bookmark', (_e, item) => storage.saveBookmark(item))
@@ -175,6 +199,18 @@ function setupIPC(): void {
     }
   })
   ipcMain.handle('share-text', async (_e, text: string) => {
+    const { response, checkboxChecked } = await dialog.showMessageBox(mainWindow!, {
+      type: 'warning',
+      title: '외부 서비스에 공유',
+      message: '리서치 내용을 dpaste.org에 업로드합니다',
+      detail: '• 링크를 아는 누구나 7일간 열람 가능합니다\n• 사내/민감 정보가 포함되어 있지 않은지 확인하세요\n• 한 번 업로드한 내용은 회수할 수 없습니다',
+      buttons: ['공유', '취소'],
+      defaultId: 1,
+      cancelId: 1,
+      checkboxLabel: '내용을 검토했고 외부 공개에 동의합니다',
+      checkboxChecked: false,
+    })
+    if (response !== 0 || !checkboxChecked) return null
     try {
       const res = await net.fetch('https://dpaste.org/api/', {
         method: 'POST',
@@ -225,6 +261,7 @@ function setupIPC(): void {
       defaultId: 0,
     })
     if (response !== 0) return
+    if (!isSafeHttpUrl(info.url)) return
     try {
       await shell.openExternal(info.url)
     } catch {
@@ -251,8 +288,9 @@ app.whenReady().then(() => {
   if (app.isPackaged) {
     app.setLoginItemSettings({ openAtLogin: config.openAtLogin, openAsHidden: true })
   }
+  scheduler.onFailureExhausted = notifyFailureExhausted
   scheduler.start(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
-  trayManager.create(mainWindow!, runResearch)
+  trayManager.create(mainWindow!, () => { runResearch().catch(() => {}) })
 
 })
 
@@ -279,7 +317,7 @@ async function fetchLatestUpdate(): Promise<{ version: string; url: string } | n
       url: data.html_url || 'https://github.com/deweunsoo/pringsearch/releases/latest',
     }
   } catch (err: any) {
-    fs.appendFileSync('/tmp/pringsearch.log', `[${new Date().toISOString()}] Update check error: ${err?.message || err}\n`)
+    logLine(`Update check error: ${err?.message || err}`)
     return null
   }
 }

@@ -1,5 +1,4 @@
 import Parser from 'rss-parser'
-import https from 'https'
 import type { RawArticle, RssSource } from '../../shared/types'
 
 export class RssCollector {
@@ -7,10 +6,7 @@ export class RssCollector {
 
   constructor() {
     this.parser = new Parser({
-      timeout: 10000,
-      requestOptions: {
-        agent: new https.Agent({ rejectUnauthorized: false })
-      }
+      timeout: 10000
     })
   }
 
