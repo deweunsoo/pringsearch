@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { CatIcon } from './icons'
+import { validateKeyword } from '../../../shared/keyword-validator'
 
 interface Props {
   onComplete: () => void
@@ -86,6 +87,7 @@ export default function Onboarding({ onComplete }: Props) {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [customKeywords, setCustomKeywords] = useState<string[]>([])
   const [customInput, setCustomInput] = useState('')
+  const [customError, setCustomError] = useState('')
   const [step, setStep] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -321,12 +323,22 @@ export default function Onboarding({ onComplete }: Props) {
             </div>
             <input
               value={customInput}
-              onChange={e => setCustomInput(e.target.value)}
+              onChange={e => { setCustomInput(e.target.value); if (customError) setCustomError('') }}
               onKeyDown={e => {
-                if (e.key === 'Enter' && customInput.trim()) {
-                  setCustomKeywords(prev => [...prev, customInput.trim()])
-                  setCustomInput('')
+                if (e.key !== 'Enter') return
+                const trimmed = customInput.trim()
+                const validation = validateKeyword(trimmed)
+                if (!validation.valid) {
+                  setCustomError(validation.reason || '올바른 키워드를 입력해주세요')
+                  return
                 }
+                if (customKeywords.includes(trimmed)) {
+                  setCustomError('이미 추가된 키워드입니다')
+                  return
+                }
+                setCustomKeywords(prev => [...prev, trimmed])
+                setCustomInput('')
+                setCustomError('')
               }}
               placeholder="기타 관심사 직접 입력 (Enter)"
               style={{
@@ -342,6 +354,11 @@ export default function Onboarding({ onComplete }: Props) {
                 letterSpacing: '-0.2px',
               }}
             />
+            {customError && (
+              <div style={{ marginTop: '6px', fontSize: '13px', color: '#F87171', letterSpacing: '-0.1px' }}>
+                {customError}
+              </div>
+            )}
           </div>
 
           <button

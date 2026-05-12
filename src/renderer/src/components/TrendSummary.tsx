@@ -1,4 +1,6 @@
 import BoldText from './BoldText'
+import LinkSafetyBadge from './LinkSafetyBadge'
+import OneLineHeadline from './OneLineHeadline'
 
 interface TrendItem {
   keywords?: string[]
@@ -16,43 +18,28 @@ export default function TrendSummary({ trends, headline }: Props) {
 
   return (
     <div>
-      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#8B95A1', marginBottom: '6px', letterSpacing: '-0.2px' }}>핵심 트렌드</h2>
+      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#3182F6', marginBottom: '6px', letterSpacing: '-0.2px' }}>핵심 트렌드</h2>
       {headline && (
-        <p style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#191F28',
-          lineHeight: 1.4,
-          letterSpacing: '0em',
-          margin: '0 0 16px 0',
-          wordBreak: 'keep-all'
-        }}>{headline}</p>
+        <OneLineHeadline
+          text={headline.replace(/\*\*/g, '')}
+          style={{
+            fontWeight: 700,
+            color: '#191F28',
+            lineHeight: 1.4,
+            letterSpacing: '0em',
+            margin: '0 0 16px 0',
+          }}
+        />
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {trends.map((trend, i) => (
           <div
             key={i}
             className="trend-item"
-            onClick={() => trend.relatedUrls?.[0] && window.open(trend.relatedUrls[0], '_blank')}
+            onClick={() => trend.relatedUrls?.[0] && window.api.openExternalUrl(trend.relatedUrls[0])}
             style={{ cursor: trend.relatedUrls?.[0] ? 'pointer' : 'default' }}
           >
             <div>
-              {trend.keywords && trend.keywords.length > 0 && (
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                  {trend.keywords.map((kw, j) => (
-                    <span key={j} className="keyword-tag" style={{
-                      fontSize: '13px',
-                      fontWeight: 500,
-                      color: '#0084FE',
-                      background: '#FFFFFF',
-                      border: '1px solid #A8CFFF',
-                      borderRadius: '6px',
-                      padding: '3px 10px',
-                      letterSpacing: '0em'
-                    }}>{kw}</span>
-                  ))}
-                </div>
-              )}
               {(() => {
                 const colonIdx = trend.text.indexOf(':')
                 if (colonIdx === -1) return (
@@ -71,6 +58,16 @@ export default function TrendSummary({ trends, headline }: Props) {
                   </>
                 )
               })()}
+              {(trend.keywords?.[0] || trend.relatedUrls?.[0]) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px' }}>
+                  {trend.keywords?.[0] && (
+                    <span className="trend-keyword-chip">{trend.keywords[0]}</span>
+                  )}
+                  {trend.relatedUrls?.[0] && (
+                    <LinkSafetyBadge url={trend.relatedUrls[0]} />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}

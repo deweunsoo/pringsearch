@@ -94,7 +94,14 @@ export class StorageService {
       const parsed = JSON.parse(raw)
       const arr: ResearchResult[] = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : [])
       if (arr.length === 0) return null
-      return arr.map(r => ({ ...r, category: r.category ?? 'Legacy' }))
+      const filtered = arr.filter(r => (r.trends?.length || 0) > 0 || (r.insights?.length || 0) > 0)
+      if (filtered.length === 0) return null
+      if (filtered.length !== arr.length) {
+        try {
+          fs.writeFileSync(this.researchPath(date), JSON.stringify(filtered, null, 2), 'utf-8')
+        } catch {}
+      }
+      return filtered.map(r => ({ ...r, category: r.category ?? 'Legacy' }))
     } catch {
       return null
     }

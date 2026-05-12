@@ -5,8 +5,8 @@ vi.mock('./rss-collector', () => ({
   RssCollector: class {
     async collect() {
       return [
-        { title: 'Article A', url: 'https://a.com', source: 'rss', sourceName: 'RSS', summary: 'A', publishedAt: '2026-02-27T09:00:00Z' },
-        { title: 'Article B', url: 'https://b.com', source: 'rss', sourceName: 'RSS', summary: 'B', publishedAt: '2026-02-27T09:00:00Z' }
+        { title: 'AI Article A', url: 'https://a.com', source: 'rss', sourceName: 'RSS', summary: 'about ai', publishedAt: '2026-02-27T09:00:00Z' },
+        { title: 'AI Article B', url: 'https://b.com', source: 'rss', sourceName: 'RSS', summary: 'about ai', publishedAt: '2026-02-27T09:00:00Z' }
       ]
     }
   }

@@ -93,9 +93,9 @@ ${articleSummaries}
 
 다음 JSON 형식으로 정확히 응답하세요 (JSON만, 다른 텍스트 없이):
 {
-  "trendHeadline": "핵심 트렌드 섹션의 요약 제목 (한국어, 한 문장)",
-  "insightHeadline": "인사이트 섹션의 요약 제목 (한국어, 한 문장)",
-  "actionHeadline": "실무 적용 섹션의 요약 제목 (한국어, 한 문장)",
+  "trendHeadline": "핵심 트렌드 섹션의 요약 제목 (한국어 12자 이내 명사구, 공백 포함)",
+  "insightHeadline": "인사이트 섹션의 요약 제목 (한국어 12자 이내 명사구, 공백 포함)",
+  "actionHeadline": "실무 적용 섹션의 요약 제목 (한국어 12자 이내 명사구, 공백 포함)",
   "trends": [
     { "keywords": ["키워드1", "키워드2"], "text": "핵심 트렌드 한 줄 요약 (한국어)", "relatedUrls": ["관련 기사 URL"] }
   ],
@@ -110,7 +110,9 @@ ${articleSummaries}
 규칙:
 - 이전 리서치에서 이미 다룬 내용과 절대 중복되지 않는 완전히 새로운 관점, 새로운 주제, 새로운 분석을 제시할 것
 - 같은 기사라도 이전과 다른 각도에서 분석할 것 (예: 이전에 시장 규모를 다뤘으면, 이번엔 기술적 영향이나 사용자 경험 변화를 다룰 것)${existingTrends.length > 0 ? `\n- 이미 다룬 트렌드 (중복 금지): ${existingTrends.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}${existingInsights.length > 0 ? `\n- 이미 다룬 인사이트 (중복 금지): ${existingInsights.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}${existingActions.length > 0 ? `\n- 이미 다룬 실무 적용 (중복 금지): ${existingActions.map((t, i) => `${i + 1}. ${t}`).join('; ')}` : ''}
-- trendHeadline, insightHeadline, actionHeadline은 각 섹션의 내용을 하나의 구체적인 문장으로 요약
+- trendHeadline, insightHeadline, actionHeadline은 각 섹션의 핵심을 매우 짧은 명사구로 요약. 한국어 12자 이내 (공백 포함, 영문 단어 1단어=2자 환산). 단어 나열형은 금지, 자연스러운 명사구만. 마침표/문장 부호/볼드 마크다운(**) 절대 사용 금지. 12자 초과 절대 금지 — 길어지면 단어를 줄이거나 더 짧은 표현으로 바꿔서 12자 이내로 맞출 것.
+  좋은 예 (10~12자): "AI 코딩 도구 가속", "음성 UI의 부상", "디자인 시스템 표준화"
+  나쁜 예: "Agentic·multimodal·process-first 설계 실행" (너무 김, 단어 나열형), "AI 도입의 숨겨진 병목들과 해결책" (서술형)
 - trends는 최대 5개
 - insights는 최대 5개
 - actions는 최대 5개
@@ -276,32 +278,44 @@ ${context}
   private runCli(cliPath: string, args: string[], prompt: string): Promise<string> {
     return new Promise((resolve, reject) => {
       const os = require('os')
-      const path = require('path')
-      const { randomUUID } = require('crypto')
 
-      // 프롬프트를 임시 파일로 저장하고 cat으로 파이프
-      // randomUUID — 병렬 호출 시 Date.now() ms 충돌 방지
-      const tmpFile = path.join(os.tmpdir(), `pringsearch-prompt-${randomUUID()}.txt`)
-      fs.writeFileSync(tmpFile, prompt, 'utf-8')
-
-      const shell = spawn('sh', ['-c', `cat "${tmpFile}" | "${cliPath}" ${args.map(a => `"${a}"`).join(' ')}`], {
+      // Spawn the CLI directly (no shell) and feed the prompt via stdin.
+      // Avoids shell-quoting bugs / injection and removes the tmp-file churn.
+      const child = spawn(cliPath, args, {
         env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.PATH}`, HOME: os.homedir() },
-        timeout: 120_000
+        stdio: ['pipe', 'pipe', 'pipe'],
       })
 
       let stdout = ''
       let stderr = ''
-      shell.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
-      shell.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
-      shell.on('close', (code) => {
-        try { fs.unlinkSync(tmpFile) } catch {}
-        if (code !== 0) return reject(new Error(`CLI exited ${code}: ${stderr}`))
+      let settled = false
+      let killTimer: NodeJS.Timeout | undefined
+
+      const settle = (fn: () => void) => {
+        if (settled) return
+        settled = true
+        clearTimeout(watchdog)
+        if (killTimer) clearTimeout(killTimer)
+        fn()
+      }
+
+      // SIGTERM after 120s, then force-kill 5s later so a hung CLI cannot
+      // leave the promise pending forever (which was stalling the orchestrator).
+      const watchdog = setTimeout(() => {
+        try { child.kill('SIGTERM') } catch {}
+        killTimer = setTimeout(() => { try { child.kill('SIGKILL') } catch {} }, 5_000)
+      }, 120_000)
+
+      child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+      child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+      child.on('close', (code) => settle(() => {
+        if (code !== 0) return reject(new Error(`CLI exited ${code}: ${stderr || stdout}`))
         resolve(stdout)
-      })
-      shell.on('error', (err) => {
-        try { fs.unlinkSync(tmpFile) } catch {}
-        reject(err)
-      })
+      }))
+      child.on('error', (err) => settle(() => reject(err)))
+
+      child.stdin.on('error', (err) => settle(() => reject(err)))
+      child.stdin.end(prompt, 'utf-8')
     })
   }
 }

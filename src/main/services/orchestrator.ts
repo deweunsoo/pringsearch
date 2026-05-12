@@ -27,7 +27,19 @@ export class ResearchOrchestrator {
       this.hnCollector.collect(keywords)
     ])
 
-    const allArticles = [...rssArticles, ...hnArticles]
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    const tokens = keywords
+      .flatMap(k => k.toLowerCase().split(/\s+/))
+      .filter(t => t.length >= 2)
+    const matchesKeyword = (a: RawArticle): boolean => {
+      if (tokens.length === 0) return true
+      const haystack = `${a.title} ${a.summary || ''}`.toLowerCase()
+      return tokens.some(t => haystack.includes(t))
+    }
+    const relevantRss = rssArticles.filter(matchesKeyword)
+    const allArticles = [...relevantRss, ...hnArticles]
     const seen = new Set<string>()
     const uniqueArticles: RawArticle[] = []
 
@@ -46,17 +58,26 @@ export class ResearchOrchestrator {
       }
     }
 
-    const articlesToAnalyze = uniqueArticles.length > 0
-      ? uniqueArticles
-      : existingResults?.flatMap(r => r.rawArticles || []) || []
+    let articlesToAnalyze: RawArticle[] = uniqueArticles
+    if (articlesToAnalyze.length === 0 && existingResults && existingResults.length > 0) {
+      const fallback: RawArticle[] = []
+      const fallbackSeen = new Set<string>()
+      for (const r of existingResults) {
+        for (const a of r.rawArticles || []) {
+          if (!fallbackSeen.has(a.url)) {
+            fallbackSeen.add(a.url)
+            fallback.push(a)
+          }
+        }
+      }
+      articlesToAnalyze = fallback
+    }
 
     const existingTrends = existingResults?.flatMap(r => r.trends || []).map(t => t.text) || []
     const existingInsights = existingResults?.flatMap(r => r.insights || []).map(i => `${i.title}: ${i.body}`) || []
     const existingActions = existingResults?.flatMap(r => r.actions || []).map(a => a.text) || []
     const analysis = await this.analyzer.analyze(articlesToAnalyze, keywords, existingTrends, existingInsights, existingActions)
 
-    const now = new Date()
-    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     return {
       date: today,
       generatedAt: new Date().toISOString(),

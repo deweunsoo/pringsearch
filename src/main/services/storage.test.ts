@@ -106,7 +106,7 @@ describe('StorageService', () => {
         date: '2026-01-01',
         generatedAt: '2026-01-01T00:00:00Z',
         rawArticles: [],
-        trends: [],
+        trends: [{ keywords: ['legacy'], text: 'sample trend', relatedUrls: [] }],
         insights: [],
         actions: [],
         trendHeadline: '',
@@ -116,6 +116,40 @@ describe('StorageService', () => {
       fs.writeFileSync(path.join(dataDir, 'research-2026-01-01.json'), JSON.stringify([legacyRecord]), 'utf-8')
       const loaded = storage.loadResearch('2026-01-01')
       expect(loaded![0].category).toBe('Legacy')
+    })
+
+    it('filters out empty research records (no trends and no insights)', () => {
+      const dataDir = path.join(testDir, 'data')
+      const records = [
+        {
+          date: '2026-01-02',
+          generatedAt: '2026-01-02T00:00:00Z',
+          category: 'Empty Cat',
+          rawArticles: [],
+          trends: [],
+          insights: [],
+          actions: [],
+          trendHeadline: '',
+          insightHeadline: '',
+          actionHeadline: '',
+        },
+        {
+          date: '2026-01-02',
+          generatedAt: '2026-01-02T00:00:00Z',
+          category: 'Real Cat',
+          rawArticles: [],
+          trends: [{ keywords: [], text: 'kept', relatedUrls: [] }],
+          insights: [],
+          actions: [],
+          trendHeadline: '',
+          insightHeadline: '',
+          actionHeadline: '',
+        },
+      ]
+      fs.writeFileSync(path.join(dataDir, 'research-2026-01-02.json'), JSON.stringify(records), 'utf-8')
+      const loaded = storage.loadResearch('2026-01-02')
+      expect(loaded).toHaveLength(1)
+      expect(loaded![0].category).toBe('Real Cat')
     })
   })
 })

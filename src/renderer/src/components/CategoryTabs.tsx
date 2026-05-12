@@ -37,7 +37,7 @@ const CategoryTabs: FC<Props> = ({ categories, active, onChange, showBorder }) =
               fontSize: 12,
               fontWeight: isActive ? 600 : 500,
               background: isActive ? '#191F28' : 'transparent',
-              color: isActive ? '#FFFFFF' : '#8B95A1',
+              color: isActive ? '#FFFFFF' : '#4E5968',
               whiteSpace: 'nowrap',
               letterSpacing: '-0.2px',
               transition: 'background 0.15s, color 0.15s',

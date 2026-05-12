@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, Notification, screen, clipboard, net, shell, dialog } from 'electron'
 import fs from 'fs'
-import { execFile } from 'child_process'
+import { execFile, execFileSync } from 'child_process'
+import https from 'https'
+import tls from 'tls'
 import path from 'path'
 import os from 'os'
 import { StorageService } from './services/storage'
@@ -8,6 +10,7 @@ import { ResearchOrchestrator } from './services/orchestrator'
 import { MultiCategoryOrchestrator } from './services/multi-category-orchestrator'
 import { TopIssuePicker } from './services/top-issue-picker'
 import { ClaudeAnalyzer, detectAiProvider } from './services/analyzer'
+import { assessExternalUrl } from '../shared/url-safety'
 import { Scheduler } from './scheduler'
 import { TrayManager } from './tray'
 import type { ResearchResult } from '../shared/types'
@@ -18,6 +21,32 @@ import type { ResearchResult } from '../shared/types'
 // Pringsearch has no audio/video playback.
 app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService,GlobalMediaControls')
 
+// Without these the main process dies silently on any deep async error
+// (rss-parser, fetch, Claude CLI, etc.), leaving the UI stuck.
+process.on('uncaughtException', (err) => {
+  try { logLine(`uncaughtException: ${err?.message || err}\n${err?.stack || ''}`) } catch {}
+  console.error('uncaughtException', err)
+})
+process.on('unhandledRejection', (reason: any) => {
+  try { logLine(`unhandledRejection: ${reason?.message || reason}`) } catch {}
+  console.error('unhandledRejection', reason)
+})
+
+// Trust macOS keychain root CAs (e.g. Zscaler) so RSS fetches don't fail behind corporate TLS proxies.
+if (process.platform === 'darwin') {
+  try {
+    const out = execFileSync(
+      'security',
+      ['find-certificate', '-a', '-p', '/Library/Keychains/System.keychain'],
+      { encoding: 'utf-8', timeout: 5000 },
+    )
+    const certs = out.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g) || []
+    if (certs.length > 0) {
+      https.globalAgent.options.ca = [...tls.rootCertificates, ...certs]
+    }
+  } catch {}
+}
+
 app.name = app.isPackaged ? 'Pringsearch' : 'Pringsearch DEV'
 
 const DATA_PATH = path.join(os.homedir(), 'ai-research-widget')
@@ -27,6 +56,7 @@ const trayManager = new TrayManager()
 
 let mainWindow: BrowserWindow | null = null
 let researchRunning = false
+let researchCanceled = false
 
 function isSafeHttpUrl(raw: string): boolean {
   try {
@@ -43,6 +73,51 @@ function logLine(msg: string): void {
     fs.mkdirSync(dir, { recursive: true })
     fs.appendFileSync(path.join(dir, 'pringsearch.log'), `[${new Date().toISOString()}] ${msg}\n`)
   } catch {}
+}
+
+async function openExternalUrlWithSafety(raw: string): Promise<boolean> {
+  const assessment = assessExternalUrl(raw)
+  const host = assessment.host || '알 수 없는 주소'
+
+  if (assessment.level === 'blocked') {
+    await dialog.showMessageBox(mainWindow!, {
+      type: 'warning',
+      title: '링크를 열지 않았어요',
+      message: `${host} 링크는 안전 기준에 맞지 않아요.`,
+      detail: assessment.reasons.join('\n'),
+      buttons: ['확인'],
+      defaultId: 0,
+      cancelId: 0,
+    })
+    return false
+  }
+
+  const detailLines = [
+    assessment.url,
+    '',
+    assessment.trust === 'trusted'
+      ? '신뢰 소스 목록에 있는 도메인이에요.'
+      : '확인 불가: 신뢰 소스 목록에 없는 도메인이라 조심해서 열어야 해요.',
+    '',
+    ...(assessment.reasons.length > 0
+      ? ['주의할 점:', ...assessment.reasons.map(r => `- ${r}`), '']
+      : []),
+    '파일 다운로드, 로그인, 확장 프로그램 설치 요청이 뜨면 닫아주세요.',
+  ]
+
+  const { response } = await dialog.showMessageBox(mainWindow!, {
+    type: assessment.level === 'caution' ? 'warning' : 'question',
+    title: '외부 사이트로 이동',
+    message: `${host} 사이트로 이동할까요?`,
+    detail: detailLines.join('\n'),
+    buttons: ['취소', '열기'],
+    defaultId: 0,
+    cancelId: 0,
+  })
+
+  if (response !== 1 || !assessment.url) return false
+  await shell.openExternal(assessment.url)
+  return true
 }
 
 function createWindow(): void {
@@ -74,7 +149,9 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => mainWindow?.show())
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (isSafeHttpUrl(url)) shell.openExternal(url)
+    if (isSafeHttpUrl(url)) {
+      openExternalUrlWithSafety(url).catch(err => logLine(`Open link error: ${err?.message || err}`))
+    }
     return { action: 'deny' }
   })
 
@@ -88,6 +165,7 @@ function createWindow(): void {
 async function runResearch(): Promise<void> {
   if (researchRunning) return
   researchRunning = true
+  researchCanceled = false
   const config = storage.loadConfig()
 
   try {
@@ -106,6 +184,12 @@ async function runResearch(): Promise<void> {
     const multi = new MultiCategoryOrchestrator(orchestrator, picker)
 
     const { results, topIssue } = await multi.run(config, existingByCategory)
+
+    if (researchCanceled) {
+      logLine('Research canceled by user — dropping results')
+      return
+    }
+
     logLine(`Completed ${results.length} categories, topIssue=${topIssue.categoryName}`)
 
     for (const r of results) {
@@ -123,9 +207,17 @@ async function runResearch(): Promise<void> {
       n.show()
     }
   } catch (error: any) {
-    logLine(`FAILED: ${error?.message || error}`)
-    console.error('[Research] Failed:', error?.message || error)
-    mainWindow?.webContents.send('research-complete', null)
+    const msg = error?.message || String(error)
+    logLine(`FAILED: ${msg}`)
+    console.error('[Research] Failed:', msg)
+    if (!researchCanceled) {
+      mainWindow?.webContents.send('research-complete', null)
+      try {
+        if (Notification.isSupported()) {
+          new Notification({ title: '리서치 실패', body: msg.slice(0, 200) }).show()
+        }
+      } catch {}
+    }
     throw error
   } finally {
     researchRunning = false
@@ -161,7 +253,15 @@ function setupIPC(): void {
     }
     scheduler.reschedule(config.scheduleHour, config.scheduleMinute, runResearch, config.openAtLogin)
   })
-  ipcMain.handle('run-research-now', () => runResearch().catch(() => {}))
+  ipcMain.handle('run-research-now', async () => {
+    try {
+      await runResearch()
+      return { ok: true }
+    } catch (err: any) {
+      return { ok: false, error: err?.message || String(err) }
+    }
+  })
+  ipcMain.handle('cancel-research', () => { if (researchRunning) researchCanceled = true })
   ipcMain.handle('delete-research', (_e, date: string, index: number) => storage.deleteResearchAt(date, index))
   ipcMain.handle('get-bookmarks', () => storage.loadBookmarks())
   ipcMain.handle('save-bookmark', (_e, item) => storage.saveBookmark(item))
@@ -244,6 +344,7 @@ function setupIPC(): void {
     const analyzer = new ClaudeAnalyzer(config.anthropicApiKey)
     return analyzer.generateDiscussion(research)
   })
+  ipcMain.handle('open-external-url', async (_e, url: string) => openExternalUrlWithSafety(url))
   ipcMain.handle('window-close', () => mainWindow?.hide())
   ipcMain.handle('window-minimize', () => mainWindow?.minimize())
   ipcMain.handle('window-maximize', () => {

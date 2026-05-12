@@ -8,7 +8,8 @@ declare global {
       getResearchDates: () => Promise<string[]>
       getConfig: () => Promise<any>
       saveConfig: (config: any) => Promise<void>
-      runResearchNow: () => Promise<void>
+      runResearchNow: () => Promise<{ ok: boolean; error?: string }>
+      cancelResearch: () => Promise<void>
       getBookmarks: () => Promise<any[]>
       saveBookmark: (item: any) => Promise<void>
       removeBookmark: (id: string) => Promise<void>
@@ -18,6 +19,7 @@ declare global {
       saveMarkdown: (filePath: string, content: string) => Promise<void>
       pickFolder: () => Promise<string | null>
       runDiscussion: (research: any) => Promise<any[]>
+      openExternalUrl: (url: string) => Promise<boolean>
       deleteResearch: (date: string, index: number) => Promise<void>
     }
   }
@@ -34,8 +36,11 @@ export function useResearch() {
   const [sessions, setSessions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(() => toLocalDateStr(new Date()))
-  const loadingStartRef = { current: 0 }
+  const [lastError, setLastError] = useState<string | null>(null)
   const isAddingRef = useRef(false)
+  const userInitiatedRef = useRef(false)
+  const currentDateRef = useRef(currentDate)
+  useEffect(() => { currentDateRef.current = currentDate }, [currentDate])
 
   const loadResearch = useCallback(async (date: string) => {
     const result = await window.api.getResearch(date)
@@ -45,17 +50,30 @@ export function useResearch() {
 
   const runNow = useCallback(async () => {
     isAddingRef.current = false
-    setSessions([])
+    userInitiatedRef.current = true
+    setLastError(null)
     setLoading(true)
-    loadingStartRef.current = Date.now()
-    await window.api.runResearchNow()
+    try {
+      await window.api.runResearchNow()
+    } catch (err: any) {
+      setLastError(err?.message || '리서치 실행 중 오류가 발생했어요.')
+      setLoading(false)
+      userInitiatedRef.current = false
+    }
   }, [])
 
   const addResearch = useCallback(async () => {
     isAddingRef.current = true
+    userInitiatedRef.current = true
+    setLastError(null)
     setLoading(true)
-    loadingStartRef.current = Date.now()
-    await window.api.runResearchNow()
+    try {
+      await window.api.runResearchNow()
+    } catch (err: any) {
+      setLastError(err?.message || '리서치 실행 중 오류가 발생했어요.')
+      setLoading(false)
+      userInitiatedRef.current = false
+    }
   }, [])
 
   useEffect(() => {
@@ -64,26 +82,25 @@ export function useResearch() {
       setLoading(false)
     })
 
-    const cleanup = window.api.onResearchComplete(payload => {
-      const elapsed = Date.now() - loadingStartRef.current
-      const minDelay = Math.max(0, 3000 - elapsed)
-      setTimeout(() => {
-        const incoming: any[] = payload?.results
-          ? payload.results
-          : payload
-            ? [payload]
-            : []
-        if (incoming.length > 0) {
-          if (isAddingRef.current) {
-            setSessions(prev => [...prev, ...incoming])
-          } else {
-            setSessions(incoming)
-          }
-          setCurrentDate(incoming[0].date)
-        }
-        isAddingRef.current = false
-        setLoading(false)
-      }, minDelay)
+    const cleanup = window.api.onResearchComplete(async (payload: any) => {
+      isAddingRef.current = false
+      setLoading(false)
+      if (payload === null) {
+        setLastError('리서치를 완료하지 못했어요. 네트워크와 AI 키를 확인해 주세요.')
+        userInitiatedRef.current = false
+        return
+      }
+      const result = await window.api.getTodayResearch()
+      const arr: any[] = Array.isArray(result) ? result : result ? [result] : []
+      const today = toLocalDateStr(new Date())
+      // Only switch the view to today if the user is already on today, or
+      // they explicitly initiated this run. Background completions (scheduler)
+      // must not yank a user away from a past-date view they're browsing.
+      if (currentDateRef.current === today || userInitiatedRef.current) {
+        setSessions(arr)
+        if (arr.length > 0) setCurrentDate(today)
+      }
+      userInitiatedRef.current = false
     })
 
     return cleanup
@@ -92,6 +109,7 @@ export function useResearch() {
   const cancelAdd = useCallback(() => {
     isAddingRef.current = false
     setLoading(false)
+    window.api.cancelResearch().catch(() => {})
   }, [])
 
   const deleteSession = useCallback(async (index: number) => {
@@ -105,6 +123,7 @@ export function useResearch() {
   }, [])
 
   const research = sessions.length > 0 ? sessions[0] : null
+  const clearError = useCallback(() => setLastError(null), [])
 
-  return { research, sessions, loading, currentDate, loadResearch, runNow, addResearch, cancelAdd, clear, deleteSession }
+  return { research, sessions, loading, currentDate, lastError, loadResearch, runNow, addResearch, cancelAdd, clear, deleteSession, clearError }
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
+import { validateKeyword } from '../../../shared/keyword-validator'
+import Tooltip from './Tooltip'
 
 interface RssSource {
   name: string
@@ -43,6 +44,7 @@ interface Props {
 export default function Settings({ onBack, onRunNow }: Props) {
   const [config, setConfig] = useState<AppConfig | null>(null)
   const [newKeyword, setNewKeyword] = useState('')
+  const [keywordError, setKeywordError] = useState('')
   const [newRssName, setNewRssName] = useState('')
   const [newRssUrl, setNewRssUrl] = useState('')
   const [showToast, setShowToast] = useState(false)
@@ -166,7 +168,9 @@ export default function Settings({ onBack, onRunNow }: Props) {
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>최근 며칠치를 볼까요?</span>
-            <Tooltip text="선택한 기간 내에 올라온 글만 모아서 분석해요. 기간이 길수록 더 많은 글을 한번에 확인할 수 있어요." />
+            <Tooltip text="선택한 기간 내에 올라온 글만 모아서 분석해요. 기간이 길수록 더 많은 글을 한번에 확인할 수 있어요.">
+              <TooltipTrigger />
+            </Tooltip>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
             {[1, 3, 7, 14, 30].map(d => (
@@ -362,24 +366,44 @@ export default function Settings({ onBack, onRunNow }: Props) {
           </div>
           <input
             value={newKeyword}
-            onChange={e => setNewKeyword(e.target.value)}
+            onChange={e => { setNewKeyword(e.target.value); if (keywordError) setKeywordError('') }}
             onKeyDown={e => {
+              if (e.key !== 'Enter') return
               const trimmed = newKeyword.trim()
-              if (e.key === 'Enter' && trimmed && config.categories.length < 10 && !config.categories.some(c => c.name === trimmed)) {
-                save({ categories: [...config.categories, { name: trimmed, keywords: [trimmed] }] })
-                setNewKeyword('')
+              if (config.categories.length >= 10) {
+                setKeywordError('키워드는 최대 10개까지 추가할 수 있습니다')
+                return
               }
+              const validation = validateKeyword(trimmed)
+              if (!validation.valid) {
+                setKeywordError(validation.reason || '올바른 키워드를 입력해주세요')
+                return
+              }
+              if (config.categories.some(c => c.name === trimmed)) {
+                setKeywordError('이미 추가된 키워드입니다')
+                return
+              }
+              save({ categories: [...config.categories, { name: trimmed, keywords: [trimmed] }] })
+              setNewKeyword('')
+              setKeywordError('')
             }}
             placeholder="키워드 추가 (Enter)"
             style={inputStyle}
           />
+          {keywordError && (
+            <div style={{ marginTop: '6px', fontSize: '12px', color: '#F87171', letterSpacing: '-0.1px' }}>
+              {keywordError}
+            </div>
+          )}
         </SectionCard>
 
         {/* AI 엔진 */}
         <SectionCard>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <span style={{ fontSize: '13px', fontWeight: 600, color: '#8B95A1', letterSpacing: '-0.1px' }}>AI 엔진</span>
-            <Tooltip text="Claude Code나 Gemini가 깔려 있으면 자동으로 연결돼요. 없으면 Claude 또는 GPT API 키를 직접 입력하면 돼요." />
+            <Tooltip text="Claude Code나 Gemini가 깔려 있으면 자동으로 연결돼요. 없으면 Claude 또는 GPT API 키를 직접 입력하면 돼요.">
+              <TooltipTrigger />
+            </Tooltip>
           </div>
           {aiProvider && (
             <div style={{
@@ -494,64 +518,21 @@ export default function Settings({ onBack, onRunNow }: Props) {
 
 /* ── Sub-components ── */
 
-function Tooltip({ text }: { text: string }) {
-  const [show, setShow] = useState(false)
-  const ref = useRef<HTMLSpanElement>(null)
-  const [pos, setPos] = useState({ top: 0, left: 0 })
-
-  const handleEnter = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect()
-      setPos({ top: rect.top - 6, left: rect.left + rect.width / 2 })
-    }
-    setShow(true)
-  }
-
+function TooltipTrigger() {
   return (
-    <span
-      ref={ref}
-      style={{ display: 'inline-flex', alignItems: 'center', cursor: 'default' }}
-      onMouseEnter={handleEnter}
-      onMouseLeave={() => setShow(false)}
-    >
-      <span style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '18px',
-        height: '18px',
-        borderRadius: '50%',
-        background: '#8B95A1',
-        fontSize: '12px',
-        fontWeight: 700,
-        color: '#fff',
-        lineHeight: 1
-      }}>?</span>
-      {show && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: pos.top,
-          left: Math.max(110, Math.min(pos.left, window.innerWidth - 110)),
-          transform: 'translate(-50%, -100%)',
-          background: '#333D4B',
-          color: '#fff',
-          fontSize: '14px',
-          fontWeight: 500,
-          lineHeight: 1.5,
-          padding: '10px 14px',
-          borderRadius: '8px',
-          width: '200px',
-          whiteSpace: 'normal',
-          letterSpacing: '-0.2px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
-          zIndex: 9999,
-          pointerEvents: 'none'
-        }}>
-          {text}
-        </div>,
-        document.body
-      )}
-    </span>
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '18px',
+      height: '18px',
+      borderRadius: '50%',
+      background: '#8B95A1',
+      fontSize: '12px',
+      fontWeight: 700,
+      color: '#fff',
+      lineHeight: 1,
+    }}>?</span>
   )
 }
 

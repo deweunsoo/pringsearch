@@ -1,4 +1,5 @@
 import BoldText from './BoldText'
+import OneLineHeadline from './OneLineHeadline'
 
 interface ActionItem {
   text: string
@@ -31,17 +32,18 @@ export default function ActionItems({ actions, headline }: Props) {
 
   return (
     <div>
-      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#8B95A1', marginBottom: '6px', letterSpacing: '-0.2px' }}>실무 적용 제안</h2>
+      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#3182F6', marginBottom: '6px', letterSpacing: '-0.2px' }}>실무 적용 제안</h2>
       {headline && (
-        <p style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#191F28',
-          lineHeight: 1.4,
-          letterSpacing: '0em',
-          margin: '0 0 16px 0',
-          wordBreak: 'keep-all'
-        }}>{headline}</p>
+        <OneLineHeadline
+          text={headline.replace(/\*\*/g, '')}
+          style={{
+            fontWeight: 700,
+            color: '#191F28',
+            lineHeight: 1.4,
+            letterSpacing: '0em',
+            margin: '0 0 16px 0',
+          }}
+        />
       )}
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {sorted.map((action, i) => {

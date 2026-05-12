@@ -16,16 +16,16 @@ export class HackerNewsCollector {
     const res = await fetch(`${HN_API}/topstories.json`)
     if (!res.ok) return []
     const ids: number[] = await res.json()
-    const top50Ids = ids.slice(0, 50)
+    const topIds = ids.slice(0, 150)
     const stories = await Promise.allSettled(
-      top50Ids.map(id => this.fetchStory(id))
+      topIds.map(id => this.fetchStory(id))
     )
     const keywordGroups = keywords.map(k => k.toLowerCase().split(/\s+/))
     return stories
       .filter((r): r is PromiseFulfilledResult<HNStory | null> => r.status === 'fulfilled')
       .map(r => r.value)
       .filter((story): story is HNStory => {
-        if (!story || story.type !== 'story' || story.score < 10) return false
+        if (!story || story.type !== 'story' || story.score < 3) return false
         const title = story.title.toLowerCase()
         return keywordGroups.some(words => words.every(w => title.includes(w)))
       })

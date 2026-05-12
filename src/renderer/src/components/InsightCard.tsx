@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import BoldText from './BoldText'
+import LinkSafetyBadge from './LinkSafetyBadge'
+import OneLineHeadline from './OneLineHeadline'
 
 interface InsightItem {
   title: string
@@ -17,17 +19,18 @@ export default function InsightCards({ insights, headline }: Props) {
 
   return (
     <div>
-      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#8B95A1', marginBottom: '6px', letterSpacing: '-0.2px' }}>인사이트</h2>
+      <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#3182F6', marginBottom: '6px', letterSpacing: '-0.2px' }}>인사이트</h2>
       {headline && (
-        <p style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#191F28',
-          lineHeight: 1.4,
-          letterSpacing: '0em',
-          margin: '0 0 16px 0',
-          wordBreak: 'keep-all'
-        }}>{headline}</p>
+        <OneLineHeadline
+          text={headline.replace(/\*\*/g, '')}
+          style={{
+            fontWeight: 700,
+            color: '#191F28',
+            lineHeight: 1.4,
+            letterSpacing: '0em',
+            margin: '0 0 16px 0',
+          }}
+        />
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {insights.map((insight, i) => (
@@ -71,8 +74,8 @@ function InsightCardItem({ insight }: { insight: InsightItem }) {
 
   return (
     <div style={{
-      background: '#ECEEF0',
-      border: '1px solid #DDE0E4',
+      background: '#F7F8FA',
+      border: '1px solid #EBEEF0',
       borderRadius: '12px',
       padding: '16px'
     }}>
@@ -105,15 +108,26 @@ function InsightCardItem({ insight }: { insight: InsightItem }) {
           {insight.relatedUrls.length > 0 && (
             <div style={{ marginTop: '14px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {insight.relatedUrls.map((url, i) => (
-                <a
+                <button
                   key={i}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ fontSize: '14px', color: '#3182F6', textDecoration: 'none', fontWeight: 500 }}
+                  onClick={() => window.api.openExternalUrl(url)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#3182F6',
+                    textDecoration: 'none',
+                    fontWeight: 500,
+                  }}
                 >
                   [{i + 1}] {domainLabel(url)}
-                </a>
+                  <LinkSafetyBadge url={url} />
+                </button>
               ))}
             </div>
           )}

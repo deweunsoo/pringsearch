@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('api', {
   getConfig: () => ipcRenderer.invoke('get-config'),
   saveConfig: (config: any) => ipcRenderer.invoke('save-config', config),
   runResearchNow: () => ipcRenderer.invoke('run-research-now'),
+  cancelResearch: () => ipcRenderer.invoke('cancel-research'),
   deleteResearch: (date: string, index: number) => ipcRenderer.invoke('delete-research', date, index),
   getBookmarks: () => ipcRenderer.invoke('get-bookmarks'),
   saveBookmark: (item: any) => ipcRenderer.invoke('save-bookmark', item),
@@ -20,6 +21,7 @@ contextBridge.exposeInMainWorld('api', {
   saveMarkdown: (defaultName: string, content: string) => ipcRenderer.invoke('save-markdown', defaultName, content),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   runDiscussion: (research: any) => ipcRenderer.invoke('run-discussion', research),
+  openExternalUrl: (url: string) => ipcRenderer.invoke('open-external-url', url),
   detectAi: () => ipcRenderer.invoke('detect-ai'),
   onResearchComplete: (callback: (result: any) => void) => {
     const handler = (_event: any, result: any) => callback(result)

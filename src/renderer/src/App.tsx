@@ -106,10 +106,10 @@ export default function App() {
   )
   const categorySessions = useMemo(() => categorySessionsWithIdx.map(x => x.s), [categorySessionsWithIdx])
   useEffect(() => {
-    if (activeTab >= categorySessions.length && categorySessions.length > 0) {
+    if (!loading && activeTab >= categorySessions.length && categorySessions.length > 0) {
       setActiveTab(categorySessions.length - 1)
     }
-  }, [activeTab, categorySessions.length])
+  }, [activeTab, categorySessions.length, loading])
   const [downloadPath, setDownloadPath] = useState<string | null>(null)
   const [updateInfo, setUpdateInfo] = useState<{ version: string; url: string } | null>(null)
   useEffect(() => {
@@ -194,19 +194,16 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [showShareMenu])
 
+  // Tabs render categorySessions (filtered by activeCategory), so all
+  // clamping must use categorySessions.length. Using raw sessions.length
+  // pushed activeTab out of bounds for the visible category.
   useEffect(() => {
-    if (sessions.length > 0) {
-      setActiveTab(sessions.length - 1)
+    if (categorySessions.length > 0) {
+      setActiveTab(categorySessions.length - 1)
     } else {
       setActiveTab(0)
     }
-  }, [sessions.length])
-
-  useEffect(() => {
-    if (!loading && activeTab >= sessions.length && sessions.length > 0) {
-      setActiveTab(sessions.length - 1)
-    }
-  }, [loading, sessions.length, activeTab])
+  }, [categorySessions.length])
 
   useEffect(() => {
     if (contentRef.current) {
@@ -326,6 +323,7 @@ export default function App() {
             }}>
               {categorySessionsWithIdx.map(({ gi }, i) => {
                 const isActive = activeTab === i
+                const showCloseButton = categorySessions.length > 1 || (loading && categorySessions.length > 0)
                 return (
                   <div
                     key={gi}
@@ -338,10 +336,10 @@ export default function App() {
                     <button
                       onClick={() => setActiveTab(i)}
                       style={{
-                        padding: categorySessions.length > 1 ? '5px 28px 5px 12px' : '5px 12px',
+                        padding: showCloseButton ? '5px 28px 5px 12px' : '5px 12px',
                         fontSize: '13px',
                         fontWeight: isActive ? 600 : 400,
-                        color: isActive ? '#333D4B' : '#8B95A1',
+                        color: isActive ? '#333D4B' : '#4E5968',
                         background: isActive ? '#F2F4F6' : 'transparent',
                         border: 'none',
                         borderRadius: '8px',
@@ -355,7 +353,7 @@ export default function App() {
                     >
                       리서치 {i + 1}
                     </button>
-                    {categorySessions.length > 1 && (
+                    {showCloseButton && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -399,7 +397,7 @@ export default function App() {
                     padding: '5px 12px',
                     fontSize: '13px',
                     fontWeight: activeTab === categorySessions.length ? 600 : 400,
-                    color: activeTab === categorySessions.length ? '#333D4B' : '#8B95A1',
+                    color: activeTab === categorySessions.length ? '#333D4B' : '#4E5968',
                     background: activeTab === categorySessions.length ? '#F2F4F6' : 'transparent',
                     border: 'none',
                     borderRadius: '8px',
@@ -430,6 +428,25 @@ export default function App() {
                 </div>
                 <p style={{ fontSize: '20px', fontWeight: 600, color: '#1f2937', margin: 0 }}>자료를 가져오는 중...</p>
                 <p style={{ fontSize: '16px', color: '#9ca3af', margin: 0, marginTop: '-2px' }}>자료를 확인하고 있어요.</p>
+                <button
+                  onClick={cancelAdd}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#F2F4F6')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  style={{
+                    marginTop: '20px',
+                    background: 'transparent',
+                    border: '1px solid #D1D6DB',
+                    borderRadius: '8px',
+                    padding: '8px 20px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#8B95A1',
+                    cursor: 'pointer',
+                    transition: 'background 0.15s'
+                  }}
+                >
+                  중단하기
+                </button>
               </div>
             )}
 
@@ -470,11 +487,37 @@ export default function App() {
             {categorySessions.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', paddingTop: '16px', paddingBottom: '70px' }}>
                 {activeTab < categorySessions.length ? (
-                  <>
-                    <TrendSummary trends={categorySessions[activeTab].trends || []} headline={categorySessions[activeTab].trendHeadline} />
-                    <InsightCards insights={categorySessions[activeTab].insights || []} headline={categorySessions[activeTab].insightHeadline} />
-                    <ActionItems actions={categorySessions[activeTab].actions || []} headline={categorySessions[activeTab].actionHeadline} />
-                  </>
+                  (() => {
+                    const s = categorySessions[activeTab]
+                    const trends = s.trends || []
+                    const insights = s.insights || []
+                    const actions = s.actions || []
+                    const rawArticles = s.rawArticles || []
+                    const isEmpty = trends.length === 0 && insights.length === 0 && actions.length === 0 && rawArticles.length === 0
+                    if (isEmpty) {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', padding: '64px 24px', textAlign: 'center' }}>
+                          <div style={{ opacity: 0.35, marginBottom: '16px' }}>
+                            <DocListIcon size={72} />
+                          </div>
+                          <p style={{ fontSize: '18px', fontWeight: 600, color: '#1f2937', margin: 0, letterSpacing: '-0.3px' }}>
+                            검색 결과가 부족합니다
+                          </p>
+                          <p style={{ fontSize: '14px', color: '#9ca3af', margin: 0, marginTop: '4px', lineHeight: 1.5, letterSpacing: '-0.2px' }}>
+                            키워드를 더 구체적으로 적어주세요.<br />
+                            (예: &ldquo;AI Agent&rdquo;, &ldquo;디자인 시스템&rdquo;)
+                          </p>
+                        </div>
+                      )
+                    }
+                    return (
+                      <>
+                        <TrendSummary trends={trends} headline={s.trendHeadline} />
+                        <InsightCards insights={insights} headline={s.insightHeadline} />
+                        <ActionItems actions={actions} headline={s.actionHeadline} />
+                      </>
+                    )
+                  })()
                 ) : loading ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: '48px 0' }}>
                     <div style={{ position: 'relative', marginBottom: '24px' }}>
